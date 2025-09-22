@@ -1,0 +1,24 @@
+title = "Observation Plan"
+
+[pass.visit.exposure]
+[[pass.visit.exposure.details]]
+filter_names = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+sca_ids = [1]
+
+[pass.visit]
+[[pass.visit.details]]
+name = "visit_A"
+lon = 270.0
+lat = 66.0
+[[pass.visit.details]]
+name = "visit_B"
+lon = 270.061
+lat = 66.025
+
+[pass]
+[[pass.details]]
+name = "pass_1"
+roll = 0
+[[pass.details]]
+name = "pass_2"
+roll = 90

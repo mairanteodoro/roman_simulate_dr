@@ -1,0 +1,121 @@
+[project]
+name = "roman_data_release"
+description = "Library of data release related tools for the Roman Space Telescope."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "romanisim",
+    "astropy",
+]
+dynamic = [
+    "version",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "sphinx-astropy",
+    "sphinx-automodapi",
+    "sphinx-rtd-theme",
+    "stsci-rtd-theme",
+    "sphinx-autobuild",
+]
+
+[project.urls]
+tracker = "https://github.com/mairanteodoro/roman_data_release/issues"
+documentation = "https://roman-data-release.readthedocs.io/en/stable/"
+repository = "https://github.com/mairanteodoro/roman_data_release"
+
+[project.scripts]
+rdr_generate_input_catalog = "roman_data_release.scripts.generate_input_catalog:main"
+
+[build-system]
+requires = [
+    "setuptools >=60",
+    "setuptools_scm[toml] >=3.4",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["roman_data_release*"]
+
+[tool.setuptools.package-data]
+# package_data values are glob patterns relative to each specific subpackage.
+"*" = [
+    "**/*.fits",
+    "**/*.txt",
+    "**/*.inc",
+    "**/*.cfg",
+    "**/*.csv",
+    "**/*.yaml",
+    "**/*.json",
+    "**/*.asdf",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+extend-select = [
+    "up",   # pyupgrade
+    "i",    # isort
+    "b",    # bugbear
+    "s",    # bandit
+    "ruf",  # ruff specific
+    "npy",  # numpy lint
+]
+exclude = [
+    "jdocs",
+    ".tox",
+    ".eggs",
+    "build",
+]
+ignore = [
+    "e741", # ambiguous variable name
+]
+
+[tool.cibuildwheel.macos]
+archs = [
+    "x86_64",
+    "arm64",
+]
+
+[tool.cibuildwheel.linux]
+archs = [
+    "auto",
+    "aarch64",
+]
+
+[tool.towncrier]
+filename = "CHANGES.rst"
+directory = "changes"
+package = "roman_data_relase"
+title_format = "{version} ({project_date})"
+ignore = [".gitkeep"]
+wrap = true
+issue_format = "`#{issue} <https://github.com/mairanteodoro/roman_data_relase/issues/{issue}>`_"
+
+[[tool.towncrier.type]]
+directory = "general"
+name = "General"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "docs"
+name = "Documentation"
+showcontent = true
+
