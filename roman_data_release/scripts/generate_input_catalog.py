@@ -1,8 +1,8 @@
 import argparse
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+import threading
 import tomllib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +31,15 @@ class InputCatalog:
         self.chunk_size = chunk_size
         self.max_workers = max_workers
 
+    def janitor(self):
+        for f in self.cat_component_filenames:
+            try:
+                path = Path(f)
+                if path.exists():
+                    path.unlink()
+            except Exception as e:
+                logger.warning(f"Could not delete file {f}: {e}")
+
     def read_obs_plan(self, filename: str):
         with open(filename, "rb") as f:
             data = tomllib.load(f)
@@ -47,7 +56,9 @@ class InputCatalog:
     ) -> None:
         logger.info(f"Search radius to be used (in degrees): {search_radius}")
 
-        logger.info(f"Started exposure catalog generation in thread {threading.current_thread().name}")
+        logger.info(
+            f"Started exposure catalog generation in thread {threading.current_thread().name}"
+        )
 
         prefix = Path(output_catalog_filename).stem
         cosmos_gal_output_filename = f"{prefix}_cosmos_galaxies.ecsv"
@@ -209,8 +220,11 @@ class InputCatalog:
             or "romanisim_input_catalog.ecsv"
         )
 
+        # cleanup intermediate files
+        self.janitor()
 
-def main():
+
+def _cli():
     parser = argparse.ArgumentParser(
         description="Generate Romanisim input catalogs based on an observation plan."
     )
@@ -255,4 +269,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _cli()

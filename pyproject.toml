@@ -35,7 +35,7 @@ documentation = "https://roman-data-release.readthedocs.io/en/stable/"
 repository = "https://github.com/mairanteodoro/roman_data_release"
 
 [project.scripts]
-rdr_generate_input_catalog = "roman_data_release.scripts.generate_input_catalog:main"
+rdr_generate_input_catalog = "roman_data_release.scripts.generate_input_catalog:_cli"
 
 [build-system]
 requires = [
