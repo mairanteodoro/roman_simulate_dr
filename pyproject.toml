@@ -71,12 +71,12 @@ line-length = 88
 
 [tool.ruff.lint]
 extend-select = [
-    "up",   # pyupgrade
-    "i",    # isort
-    "b",    # bugbear
-    "s",    # bandit
-    "ruf",  # ruff specific
-    "npy",  # numpy lint
+    "UP",   # pyupgrade
+    "I",    # isort
+    "B",    # bugbear
+    "S",    # bandit
+    "RUF",  # ruff specific
+    "NPY",  # numpy lint
 ]
 exclude = [
     "jdocs",
@@ -85,7 +85,7 @@ exclude = [
     "build",
 ]
 ignore = [
-    "e741", # ambiguous variable name
+    "E741", # ambiguous variable name
 ]
 
 [tool.cibuildwheel.macos]
