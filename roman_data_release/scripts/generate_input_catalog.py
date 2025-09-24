@@ -1,6 +1,5 @@
 import argparse
 import logging
-import threading
 import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -18,6 +17,21 @@ logger = logging.getLogger(__name__)
 
 
 class InputCatalog:
+    """
+    Class to generate Romanisim input catalogs based on an observation plan.
+
+    Parameters
+    ----------
+    obs_plan_filename : str
+        Path to the observation plan TOML file.
+    output_catalog_filename : str or None, optional
+        Filename for the final output catalog.
+    chunk_size : int or None, optional
+        Number of rows per chunk when writing the final catalog. If None or <= 0, disables chunking.
+    max_workers : int or None, optional
+        Number of parallel workers for exposure catalog generation. If None or <= 1, disables parallelization.
+    """
+
     def __init__(
         self,
         obs_plan_filename: str,
@@ -25,13 +39,20 @@ class InputCatalog:
         chunk_size: int | None = None,
         max_workers: int | None = None,
     ):
-        self.plan = self.read_obs_plan(obs_plan_filename)
+        self.plan = self._read_obs_plan(obs_plan_filename)
         self.cat_component_filenames = []
         self.catalog_filename = output_catalog_filename
         self.chunk_size = chunk_size
         self.max_workers = max_workers
 
-    def janitor(self):
+    def _janitor(self):
+        """
+        Delete all intermediate catalog component files listed in self.cat_component_filenames.
+
+        Returns
+        -------
+        None
+        """
         for f in self.cat_component_filenames:
             try:
                 path = Path(f)
@@ -40,13 +61,26 @@ class InputCatalog:
             except Exception as e:
                 logger.warning(f"Could not delete file {f}: {e}")
 
-    def read_obs_plan(self, filename: str):
+    def _read_obs_plan(self, filename: str):
+        """
+        Read the observation plan from a TOML file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the TOML observation plan file.
+
+        Returns
+        -------
+        dict
+            Parsed observation plan data.
+        """
         with open(filename, "rb") as f:
             data = tomllib.load(f)
         logger.info(f"Loaded observation plan from {filename}")
         return data
 
-    def generate_exposure_catalog(
+    def _generate_exposure_catalog(
         self,
         ra_ref: float = 270.0,
         dec_ref: float = 66.0,
@@ -54,11 +88,27 @@ class InputCatalog:
         filter_list: list[str] | None = None,
         output_catalog_filename: str = "output_cat.ecsv",
     ) -> None:
-        logger.info(f"Search radius to be used (in degrees): {search_radius}")
+        """
+        Generate a catalog for a single exposure, including galaxies and stars.
 
-        logger.info(
-            f"Started exposure catalog generation in thread {threading.current_thread().name}"
-        )
+        Parameters
+        ----------
+        ra_ref : float, optional
+            Reference right ascension in degrees.
+        dec_ref : float, optional
+            Reference declination in degrees.
+        search_radius : float, optional
+            Search radius in degrees.
+        filter_list : list of str or None, optional
+            List of filter names to use. If None, uses default filters.
+        output_catalog_filename : str, optional
+            Filename for the output exposure catalog.
+
+        Returns
+        -------
+        None
+        """
+        logger.info(f"Search radius to be used (in degrees): {search_radius}")
 
         prefix = Path(output_catalog_filename).stem
         cosmos_gal_output_filename = f"{prefix}_cosmos_galaxies.ecsv"
@@ -104,9 +154,22 @@ class InputCatalog:
             ]
         )
 
-    def generate_final_catalog(
+    def _generate_final_catalog(
         self, output_catalog_filename: str = "final_romanisim_input_catalog.ecsv"
     ):
+        """
+        Concatenate all component catalogs, remove duplicates, and write the final catalog.
+        Supports chunked writing if chunk_size is set.
+
+        Parameters
+        ----------
+        output_catalog_filename : str, optional
+            Filename for the final output catalog.
+
+        Returns
+        -------
+        None
+        """
         if self.catalog_filename is None:
             self.catalog_filename = output_catalog_filename
 
@@ -139,15 +202,32 @@ class InputCatalog:
             unique_catalog.write(
                 output_catalog_filename, format="ascii.ecsv", overwrite=True
             )
-
         logger.info(
-            f"""Final concatenated catalog saved to '{output_catalog_filename}'.
-              Total sources: {len(catalog)}.
+            f"""
+              Final concatenated catalog saved to '{output_catalog_filename}'.
               Total unique sources: {len(unique_catalog)}.
               """
         )
 
     def run(self, output_catalog_filename: str | None = None):
+        """
+        Run the Romanisim input catalog generation workflow.
+
+        This method processes all passes, visits, and exposures described in the observation plan.
+        Each exposure job is executed independently, and parallelization is applied globally across all jobs
+        if `max_workers` is set to a value greater than 1. After all exposure catalogs are generated,
+        the final catalog is assembled and intermediate files are cleaned up.
+
+        Parameters
+        ----------
+        output_catalog_filename : str or None, optional
+            Filename for the final output catalog. If None, uses the value provided at initialization.
+
+        Returns
+        -------
+        None
+        """
+        jobs = []
         for p in self.plan["passes"]:
             pass_name = p.get("name", "pass")
             for v in p.get("visits", []):
@@ -157,16 +237,15 @@ class InputCatalog:
                 logger.info(f"pass: {pass_name}, visit: {visit_name}")
                 logger.info(f"  ra_ref: {ra_ref}, dec_ref: {dec_ref}")
 
-                exposures = []
                 for eidx, e in enumerate(v.get("exposures", [])):
                     filter_list = e.get(
                         "filter_names",
-                        ["F062", "F087", "F106", "F129", "F158", "F184", "F213"],
+                        ["f062", "f087", "f106", "f129", "f158", "f184", "f213"],
                     )
                     exposure_catalog_filename = (
                         f"{pass_name}_{visit_name}_exp{eidx}_cat.ecsv"
                     )
-                    exposures.append(
+                    jobs.append(
                         {
                             "ra_ref": ra_ref,
                             "dec_ref": dec_ref,
@@ -176,52 +255,46 @@ class InputCatalog:
                         }
                     )
 
-                # Parallelize only if max_workers > 1
-                if (
-                    hasattr(self, "max_workers")
-                    and self.max_workers
-                    and self.max_workers > 1
+        # Parallelize all jobs if max_workers > 1
+        if self.max_workers and self.max_workers > 1:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                futures = [
+                    executor.submit(
+                        self._generate_exposure_catalog,
+                        job["ra_ref"],
+                        job["dec_ref"],
+                        job["search_radius"],
+                        job["filter_list"],
+                        job["output_catalog_filename"],
+                    )
+                    for job in jobs
+                ]
+                for future, job in zip(
+                    as_completed(futures), jobs, strict=False
                 ):
-                    with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                        futures = [
-                            executor.submit(
-                                self.generate_exposure_catalog,
-                                exp["ra_ref"],
-                                exp["dec_ref"],
-                                exp["search_radius"],
-                                exp["filter_list"],
-                                exp["output_catalog_filename"],
-                            )
-                            for exp in exposures
-                        ]
-                        for future, exp in zip(
-                            as_completed(futures), exposures, strict=False
-                        ):
-                            future.result()
-                            logger.info(
-                                f" -> Saved catalog to {exp['output_catalog_filename']}."
-                            )
-                else:
-                    for exp in exposures:
-                        self.generate_exposure_catalog(
-                            exp["ra_ref"],
-                            exp["dec_ref"],
-                            exp["search_radius"],
-                            exp["filter_list"],
-                            exp["output_catalog_filename"],
-                        )
-                        logger.info(
-                            f" -> Saved catalog to {exp['output_catalog_filename']}."
-                        )
+                    future.result()
+                    logger.info(
+                        f" -> Saved temporary catalog to {job['output_catalog_filename']}."
+                    )
+        else:
+            for job in jobs:
+                self._generate_exposure_catalog(
+                    job["ra_ref"],
+                    job["dec_ref"],
+                    job["search_radius"],
+                    job["filter_list"],
+                    job["output_catalog_filename"],
+                )
+                logger.info(
+                    f" -> Saved temporary catalog to {job['output_catalog_filename']}."
+                )
 
-        self.generate_final_catalog(
+        self._generate_final_catalog(
             self.catalog_filename
             or output_catalog_filename
             or "romanisim_input_catalog.ecsv"
         )
-
-        # cleanup intermediate files
-        self.janitor()
+        self._janitor()
 
 
 def _cli():
