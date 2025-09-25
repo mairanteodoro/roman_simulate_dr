@@ -1,5 +1,6 @@
 
 title = "Observation Plan"
+romanisim_input_catalog_name = "test_cat.ecsv"
 
 [[passes]]
 name = "pass_1"
