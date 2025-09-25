@@ -36,6 +36,7 @@ repository = "https://github.com/mairanteodoro/roman_data_release"
 
 [project.scripts]
 rdr_generate_input_catalog = "roman_data_release.scripts.generate_input_catalog:_cli"
+rdr_generate_simulated_images = "roman_data_release.scripts.generate_simulated_images:_cli"
 
 [build-system]
 requires = [
