@@ -105,12 +105,12 @@ class RomanisimImages:
                                     radec=(ra_ref, dec_ref),
                                     sca=sca,
                                     bandpass=bandpass,
-                                    roll=p["roll"],
+                                    roll=p.get("roll"),
                                     catalog=self.input_catalog_filename,
                                     output_filename=output_filename,
                                 )
                             )
-
+        breakpoint()
         parallelize_jobs(
             self._generate_simulated_images,
             jobs,
