@@ -110,7 +110,6 @@ class RomanisimImages:
                                     output_filename=output_filename,
                                 )
                             )
-        breakpoint()
         parallelize_jobs(
             self._generate_simulated_images,
             jobs,
