@@ -1,5 +1,5 @@
 [project]
-name = "roman_data_release"
+name = "roman_simulate_dr"
 description = "Library of data release related tools for the Roman Space Telescope."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,13 +30,13 @@ docs = [
 ]
 
 [project.urls]
-tracker = "https://github.com/mairanteodoro/roman_data_release/issues"
+tracker = "https://github.com/mairanteodoro/roman_simulate_dr/issues"
 documentation = "https://roman-data-release.readthedocs.io/en/stable/"
-repository = "https://github.com/mairanteodoro/roman_data_release"
+repository = "https://github.com/mairanteodoro/roman_simulate_dr"
 
 [project.scripts]
-rdr_generate_input_catalog = "roman_data_release.scripts.generate_input_catalog:_cli"
-rdr_generate_simulated_images = "roman_data_release.scripts.generate_simulated_images:_cli"
+rdr_generate_input_catalog = "roman_simulate_dr.scripts.generate_input_catalog:_cli"
+rdr_generate_simulated_images = "roman_simulate_dr.scripts.generate_simulated_images:_cli"
 
 [build-system]
 requires = [
@@ -52,7 +52,7 @@ zip-safe = false
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = ["roman_data_release*"]
+include = ["roman_simulate_dr*"]
 
 [tool.setuptools.package-data]
 # package_data values are glob patterns relative to each specific subpackage.
@@ -104,11 +104,11 @@ archs = [
 [tool.towncrier]
 filename = "CHANGES.rst"
 directory = "changes"
-package = "roman_data_relase"
+package = "roman_simulate_dr"
 title_format = "{version} ({project_date})"
 ignore = [".gitkeep"]
 wrap = true
-issue_format = "`#{issue} <https://github.com/mairanteodoro/roman_data_relase/issues/{issue}>`_"
+issue_format = "`#{issue} <https://github.com/mairanteodoro/roman_simulate_dr/issues/{issue}>`_"
 
 [[tool.towncrier.type]]
 directory = "general"
