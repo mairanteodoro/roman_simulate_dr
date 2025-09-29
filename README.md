@@ -32,18 +32,16 @@ The observation plan file (`observation_plan.ecsv` in the example above) should 
 contain the following columns:
 
 ```
-│ # ---
-│ # datatype:
-│ # - {name: RA, datatype: float64}
-│ # - {name: DEC, datatype: float64}
-│ # - {name: PA, datatype: float64}
-│ # - {name: BANDPASS, datatype: string}
-│ # - {name: MA_TABLE_NUMBER, datatype: int64}
-│ # - {name: DURATION, datatype: int64}
-│ # - {name: PLAN, datatype: int64}
-│ # - {name: PASS, datatype: int64}
-│ # - {name: SEGMENT, datatype: int64}
-│ # - {name: OBSERVATION, datatype: int64}
-│ # - {name: VISIT, datatype: int64}
-│ # - {name: EXPOSURE, datatype: int64}
+- RA (float64)
+- DEC (float64)
+- PA (float64)
+- BANDPASS (string)
+- MA_TABLE_NUMBER (int64)
+- DURATION (int64)
+- PLAN (int64)
+- PASS (int64)
+- SEGMENT (int64)
+- OBSERVATION (int64)
+- VISIT (int64)
+- EXPOSURE (int64)
 ```
