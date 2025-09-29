@@ -15,16 +15,16 @@ class RomanisimImages:
     def __init__(
         self,
         obs_plan_filename: str,
-        input_catalog_filename: str | None = None,
+        input_filename: str | None = None,
         max_workers: int | None = None,
     ):
         self.plan = read_obs_plan(obs_plan_filename)
         # Get the output catalog filename either
         # from the CLI or from the observation plan file
-        if input_catalog_filename is not None:
-            self.input_catalog_filename = input_catalog_filename
+        if input_filename is not None:
+            self.input_filename = input_filename
         else:
-            self.input_catalog_filename = self.plan.get("romanisim_input_catalog_name")
+            self.input_filename = self.plan.get("romanisim_input_catalog_name")
 
         self.max_workers = max_workers
 
@@ -106,7 +106,7 @@ class RomanisimImages:
                                     sca=sca,
                                     bandpass=bandpass,
                                     roll=p.get("roll"),
-                                    catalog=self.input_catalog_filename,
+                                    catalog=self.input_filename,
                                     output_filename=output_filename,
                                 )
                             )
@@ -128,7 +128,7 @@ def _cli():
         help="Observation plan filename (default: obs_plan.toml)",
     )
     parser.add_argument(
-        "--input-catalog-filename",
+        "--input-filename",
         type=str,
         default=None,
         required=False,
@@ -146,7 +146,7 @@ def _cli():
 
     input_catalog = RomanisimImages(
         obs_plan_filename=args.obs_plan,
-        input_catalog_filename=args.input_catalog_filename,
+        input_filename=args.input_filename,
         max_workers=max_workers,
     )
     input_catalog.run()
