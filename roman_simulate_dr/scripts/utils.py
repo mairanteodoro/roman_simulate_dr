@@ -1,13 +1,14 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from astropy.table import Table
 from itertools import groupby
+
+from astropy.table import Table
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def read_obs_plan(filename: str) -> dict:
+def read_obs_plan(filename: str):
     """
     Reads an observation plan from an ECSV file and returns a dictionary
     structured with passes and visits for compatibility with InputCatalog.
@@ -17,25 +18,26 @@ def read_obs_plan(filename: str) -> dict:
     passes = []
     for (plan, pass_num), pass_rows in groupby(
         sorted(table, key=lambda row: (row["PLAN"], row["PASS"])),
-        key=lambda row: (row["PLAN"], row["PASS"])
+        key=lambda row: (row["PLAN"], row["PASS"]),
     ):
+        pass_rows = list(pass_rows)
         pass_dict = {
             "name": f"plan_{plan}_pass_{pass_num}",
             "plan": plan,
             "pass": pass_num,
+            "roll": float(pass_rows[0]["PA"]),
             "visits": [],
         }
         # Group by VISIT within each pass
         for visit_num, visit_rows in groupby(
             sorted(pass_rows, key=lambda row: row["VISIT"]),
-            key=lambda row: row["VISIT"]
+            key=lambda row: row["VISIT"],
         ):
             visit_rows = list(visit_rows)
             visit_dict = {
                 "name": f"visit_{visit_num}",
                 "lon": float(visit_rows[0]["RA"]),
                 "lat": float(visit_rows[0]["DEC"]),
-                "pa": float(visit_rows[0]["PA"]),
                 "exposures": [
                     {
                         "filter_names": [row["BANDPASS"]],
