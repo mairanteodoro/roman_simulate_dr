@@ -1,0 +1,41 @@
+
+title = "Observation Plan"
+romanisim_input_catalog_name = "test_cat.ecsv"
+
+[[passes]]
+name = "pass_1"
+roll = 0
+  [[passes.visits]]
+  name = "visit_A"
+  lon = 270.0
+  lat = 66.0
+    [[passes.visits.exposures]]
+    filter_names = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+    sca_ids = [1]
+  [[passes.visits]]
+  name = "visit_B"
+  lon = 270.061
+  lat = 66.025
+    [[passes.visits.exposures]]
+    filter_names = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+    sca_ids = [1]
+
+
+[[passes]]
+name = "pass_2"
+roll = 90
+  [[passes.visits]]
+  name = "visit_A"
+  lon = 270.0
+  lat = 66.0
+    [[passes.visits.exposures]]
+    filter_names = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+    sca_ids = [1]
+  [[passes.visits]]
+  name = "visit_B"
+  lon = 270.061
+  lat = 66.025
+    [[passes.visits.exposures]]
+    filter_names = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+    sca_ids = [1]
+
