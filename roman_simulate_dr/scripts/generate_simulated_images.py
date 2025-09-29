@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from roman_data_release.scripts.utils import parallelize_jobs, read_obs_plan
+from roman_simulate_dr.scripts.utils import parallelize_jobs, read_obs_plan
 
 # Setup logger
 logging.basicConfig(

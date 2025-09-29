@@ -1,30 +1,62 @@
 import logging
-import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from astropy.table import Table
+from itertools import groupby
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def read_obs_plan(filename: str):
+def read_obs_plan(filename: str) -> dict:
     """
-    Read the observation plan from a TOML file.
-
-    Parameters
-    ----------
-    filename : str
-        Path to the TOML observation plan file.
-
-    Returns
-    -------
-    dict
-        Parsed observation plan data.
+    Reads an observation plan from an ECSV file and returns a dictionary
+    structured with passes and visits for compatibility with InputCatalog.
     """
-    with open(filename, "rb") as f:
-        data = tomllib.load(f)
-
-    logger.info(f"Loaded observation plan from {filename}")
-    return data
+    table = Table.read(filename, format="ascii.ecsv")
+    # Group by PLAN and PASS
+    passes = []
+    for (plan, pass_num), pass_rows in groupby(
+        sorted(table, key=lambda row: (row["PLAN"], row["PASS"])),
+        key=lambda row: (row["PLAN"], row["PASS"])
+    ):
+        pass_dict = {
+            "name": f"plan_{plan}_pass_{pass_num}",
+            "plan": plan,
+            "pass": pass_num,
+            "visits": [],
+        }
+        # Group by VISIT within each pass
+        for visit_num, visit_rows in groupby(
+            sorted(pass_rows, key=lambda row: row["VISIT"]),
+            key=lambda row: row["VISIT"]
+        ):
+            visit_rows = list(visit_rows)
+            visit_dict = {
+                "name": f"visit_{visit_num}",
+                "lon": float(visit_rows[0]["RA"]),
+                "lat": float(visit_rows[0]["DEC"]),
+                "pa": float(visit_rows[0]["PA"]),
+                "exposures": [
+                    {
+                        "filter_names": [row["BANDPASS"]],
+                        "sca_ids": [1],
+                        "duration": int(row["DURATION"]),
+                        "ma_table_number": int(row["MA_TABLE_NUMBER"]),
+                        "segment": int(row["SEGMENT"]),
+                        "observation": int(row["OBSERVATION"]),
+                        "exposure": int(row["EXPOSURE"]),
+                    }
+                    for row in visit_rows
+                ],
+            }
+            pass_dict["visits"].append(visit_dict)
+        passes.append(pass_dict)
+    # Extract romanisim_input_catalog_name (i.e., the output catalog filename) from filename
+    plan_dict = {
+        "passes": passes,
+        "romanisim_input_catalog_name": filename.replace(".ecsv", "_cat.ecsv"),
+    }
+    return plan_dict
 
 
 def parallelize_jobs(method, jobs, max_workers: int | None = None):
