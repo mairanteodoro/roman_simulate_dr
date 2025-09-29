@@ -1,4 +1,4 @@
-# roman_data_release
+# roman_simulate_dr
 Roman Data Release
 This repository contains tools for the data release process for the Roman Space Telescope.
 
@@ -6,7 +6,7 @@ This repository contains tools for the data release process for the Roman Space 
 Clone this repository:
 
 ```shell
-git clone git@github.com:mairanteodoro/roman_data_release.git
+git clone git@github.com:mairanteodoro/roman_simulate_dr.git
 ```
 
 Install the tools locally:
