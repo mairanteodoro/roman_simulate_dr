@@ -18,7 +18,7 @@ Install the tools locally:
 pip install .
 ```
 
-Generate the input catalog for romanisim containing COSMOS galaxies,
+Generate the input catalog for `romanisim` containing COSMOS galaxies,
 Gaia stars, and additional random stellar sources:
 
 ```shell
@@ -35,7 +35,7 @@ rdr_generate_simulated_images \
   --input-filename romanisim_input_catalog.ecsv
 ```
 
-# Observation Plan
+# Observation Plan File
 
 The observation plan file (`observation_plan.ecsv` in the example above)
 should be in ECSV format and contain the following columns:
