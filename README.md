@@ -27,12 +27,12 @@ rdr_generate_input_catalog \
   --output-filename romanisim_input_catalog.ecsv
 ```
 
-Then, generate the L1 simulated images using romanisim:
+Then, generate the L1 simulated images using `romanisim`:
 
 ```shell
 rdr_generate_simulated_images \
   --obs-plan observation_plan.ecsv \
-  --input-filename romanisim_input_catalog.ecsv \
+  --input-filename romanisim_input_catalog.ecsv
 ```
 
 # Observation Plan
