@@ -7,7 +7,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
 
-from roman_simulate_dr.scripts.utils import parallelize_jobs, read_obs_plan
+from roman_simulate_dr.scripts.utils import read_obs_plan
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,8 +28,6 @@ class InputCatalog:
         Filename for the final output catalog.
     chunk_size : int or None, optional
         Number of rows per chunk when writing the final catalog. If None or <= 0, disables chunking.
-    max_workers : int or None, optional
-        Number of parallel workers for exposure catalog generation. If None or <= 1, disables parallelization.
     master_ra : float or None, optional
         Override for the master RA (deg) of the whole survey/catalog.
     master_dec : float or None, optional
@@ -43,7 +41,6 @@ class InputCatalog:
         obs_plan_filename: str,
         output_catalog_filename: str | None = None,
         chunk_size: int | None = None,
-        max_workers: int | None = None,
         master_ra: float | None = None,
         master_dec: float | None = None,
         master_radius: float | None = None,
@@ -55,7 +52,6 @@ class InputCatalog:
         else:
             self.catalog_filename = self.plan.get("romanisim_input_catalog_name")
         self.chunk_size = chunk_size
-        self.max_workers = max_workers
 
         # Determine the master catalog center/size
         if master_ra is not None and master_dec is not None and master_radius is not None:
@@ -201,12 +197,6 @@ def _cli():
         help="Chunk size for writing the final catalog (default: 0, disables chunking)",
     )
     parser.add_argument(
-        "--max-workers",
-        type=int,
-        default=1,
-        help="Number of parallel workers for exposure generation (default: 1, disables parallelization)",
-    )
-    parser.add_argument(
         "--master-ra",
         type=float,
         default=None,
@@ -227,13 +217,11 @@ def _cli():
     args = parser.parse_args()
 
     chunk_size = args.chunk_size if args.chunk_size > 0 else None
-    max_workers = args.max_workers if args.max_workers > 1 else None
 
     input_catalog = InputCatalog(
         obs_plan_filename=args.obs_plan,
         output_catalog_filename=args.output_filename,
         chunk_size=chunk_size,
-        max_workers=max_workers,
         master_ra=args.master_ra,
         master_dec=args.master_dec,
         master_radius=args.master_radius,
