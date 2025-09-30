@@ -5,19 +5,9 @@ import pytest
 from roman_simulate_dr.scripts.generate_input_catalog import InputCatalog
 
 
-@pytest.fixture
-def mock_plan():
-    return {
-        "passes": [
-            {"visits": [{"lon": 10.0, "lat": 20.0}, {"lon": 12.0, "lat": 22.0}]}
-        ],
-        "romanisim_input_catalog_name": "mock_output.ecsv",
-    }
-
-
 @patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
 def test_init_with_master_values(mock_read_obs_plan, mock_plan):
-    mock_read_obs_plan.return_value = mock_plan
+    mock_read_obs_plan.return_value = mock_plan()
     cat = InputCatalog(
         obs_plan_filename="dummy.ecsv",
         output_catalog_filename="output.ecsv",
@@ -35,7 +25,8 @@ def test_init_with_master_values(mock_read_obs_plan, mock_plan):
 
 @patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
 def test_init_computes_master_values(mock_read_obs_plan, mock_plan):
-    mock_read_obs_plan.return_value = mock_plan
+    catalog_name = "mock_output.ecsv"
+    mock_read_obs_plan.return_value = mock_plan(catalog_name)
     cat = InputCatalog(
         obs_plan_filename="dummy.ecsv",
         output_catalog_filename=None,
@@ -44,9 +35,9 @@ def test_init_computes_master_values(mock_read_obs_plan, mock_plan):
         master_dec=None,
         master_radius=None,
     )
-    assert cat.master_ra == pytest.approx(11.0)
-    assert cat.master_dec == pytest.approx(21.0)
-    assert cat.catalog_filename == "mock_output.ecsv"
+    assert cat.master_ra == pytest.approx(10.0)
+    assert cat.master_dec == pytest.approx(20.0)
+    assert cat.catalog_filename == catalog_name
 
 
 @patch("roman_simulate_dr.scripts.generate_input_catalog.Path.unlink")
