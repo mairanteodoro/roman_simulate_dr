@@ -28,6 +28,12 @@ docs = [
     "stsci-rtd-theme",
     "sphinx-autobuild",
 ]
+test = [
+  "pytest",
+  "pytest-cov",
+  "tox",
+  "coverage",
+]
 
 [project.urls]
 tracker = "https://github.com/mairanteodoro/roman_simulate_dr/issues"
