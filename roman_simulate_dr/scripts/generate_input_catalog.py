@@ -1,10 +1,9 @@
 import argparse
 import logging
-from pathlib import Path
 
 import numpy as np
 from astropy.coordinates import SkyCoord
-from astropy.table import Table, vstack
+from astropy.table import vstack
 from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
 
 from roman_simulate_dr.scripts.utils import read_obs_plan
@@ -19,15 +18,12 @@ logger = logging.getLogger(__name__)
 class InputCatalog:
     """
     Class to generate Romanisim input catalogs based on an observation plan.
-
     Parameters
     ----------
     obs_plan_filename : str
         Path to the observation plan TOML file.
     output_catalog_filename : str or None, optional
         Filename for the final output catalog.
-    chunk_size : int or None, optional
-        Number of rows per chunk when writing the final catalog. If None or <= 0, disables chunking.
     master_ra : float or None, optional
         Override for the master RA (deg) of the whole survey/catalog.
     master_dec : float or None, optional
@@ -40,21 +36,22 @@ class InputCatalog:
         self,
         obs_plan_filename: str,
         output_catalog_filename: str | None = None,
-        chunk_size: int | None = None,
         master_ra: float | None = None,
         master_dec: float | None = None,
         master_radius: float | None = None,
     ):
         self.plan = read_obs_plan(obs_plan_filename)
-        self.cat_component_filenames = []
         if output_catalog_filename is not None:
             self.catalog_filename = output_catalog_filename
         else:
             self.catalog_filename = self.plan.get("romanisim_input_catalog_name")
-        self.chunk_size = chunk_size
 
         # Determine the master catalog center/size
-        if master_ra is not None and master_dec is not None and master_radius is not None:
+        if (
+            master_ra is not None
+            and master_dec is not None
+            and master_radius is not None
+        ):
             self.master_ra = master_ra
             self.master_dec = master_dec
             self.master_radius = master_radius
@@ -67,7 +64,9 @@ class InputCatalog:
                 if v.get("lon") is not None and v.get("lat") is not None
             ]
             if not visits:
-                raise RuntimeError("No visits with lon/lat found in the observation plan.")
+                raise RuntimeError(
+                    "No visits with lon/lat found in the observation plan."
+                )
             # crude average for center
             ra_vals = np.array([v[0] for v in visits])
             dec_vals = np.array([v[1] for v in visits])
@@ -75,24 +74,16 @@ class InputCatalog:
             self.master_dec = float(np.mean(dec_vals))
             # crude max separation for radius
             coords = SkyCoord(ra=ra_vals, dec=dec_vals, unit="deg", frame="icrs")
-            max_sep = np.max(coords.separation(SkyCoord(self.master_ra, self.master_dec, unit="deg")).deg)
+            max_sep = np.max(
+                coords.separation(
+                    SkyCoord(self.master_ra, self.master_dec, unit="deg")
+                ).deg
+            )
             self.master_radius = float(max_sep + 0.3)  # add margin to cover all visits
-
-    def _janitor(self):
-        """
-        Delete all intermediate catalog component files listed in self.cat_component_filenames.
-        """
-        for f in self.cat_component_filenames:
-            try:
-                path = Path(f)
-                if path.exists():
-                    path.unlink()
-            except Exception as e:
-                logger.warning(f"Could not delete file {f}: {e}")
 
     def _generate_master_catalog(self, filter_list=None):
         """
-        Generate a single catalog covering the full area.
+        Generate a single catalog covering the full area and keep components in memory.
         """
         logger.info(
             f"Generating master catalog at RA={self.master_ra} Dec={self.master_dec} radius={self.master_radius} deg"
@@ -100,9 +91,9 @@ class InputCatalog:
         if filter_list is None:
             filter_list = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
         bandpasses = [bp.upper() for bp in filter_list]
-        coords = SkyCoord(ra=self.master_ra, dec=self.master_dec, unit="deg", frame="icrs")
-        output_catalog_format = "ascii.ecsv"
-        prefix = Path(self.catalog_filename).stem
+        coords = SkyCoord(
+            ra=self.master_ra, dec=self.master_dec, unit="deg", frame="icrs"
+        )
 
         gal_cat = make_cosmos_galaxies(
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.master_radius
@@ -111,55 +102,24 @@ class InputCatalog:
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.master_radius
         )
         star_cat = make_stars(
-            coord=coords, n=1000, bandpasses=bandpasses, seed=42, radius=self.master_radius
+            coord=coords,
+            n=1000,
+            bandpasses=bandpasses,
+            seed=42,
+            radius=self.master_radius,
         )
-        gal_cat.write(f"{prefix}_cosmos_galaxies.ecsv", format=output_catalog_format, overwrite=True)
-        gaia_star_cat.write(f"{prefix}_gaia_stars.ecsv", format=output_catalog_format, overwrite=True)
-        star_cat.write(f"{prefix}_additional_stars.ecsv", format=output_catalog_format, overwrite=True)
-        self.cat_component_filenames.extend([
-            f"{prefix}_cosmos_galaxies.ecsv",
-            f"{prefix}_gaia_stars.ecsv",
-            f"{prefix}_additional_stars.ecsv",
-        ])
+        self.cat_components = [gal_cat, gaia_star_cat, star_cat]
 
     def _generate_final_catalog(self):
         """
-        Concatenate all component catalogs, remove duplicates, and write the final catalog.
-        Supports chunked writing if chunk_size is set.
+        Concatenate all component catalogs and write the final catalog.
         """
-        tables = [
-            Table.read(fname, format="ascii.ecsv")
-            for fname in self.cat_component_filenames
-        ]
-        catalog = vstack(tables)
-
-        coords = SkyCoord(
-            ra=catalog["ra"], dec=catalog["dec"], unit="deg", frame="icrs"
-        )
-        _, unique_indices = np.unique(coords.to_string("decimal"), return_index=True)
-        unique_catalog = catalog[unique_indices]
-
-        # Write in chunks only if chunk_size is provided and > 0
-        if self.chunk_size is not None and self.chunk_size > 0:
-            n_rows = len(unique_catalog)
-            first_chunk = True
-            for start in range(0, n_rows, self.chunk_size):
-                chunk = unique_catalog[start : start + self.chunk_size]
-                chunk.write(
-                    self.catalog_filename,
-                    format="ascii.ecsv",
-                    overwrite=first_chunk,
-                    append=not first_chunk,
-                )
-                first_chunk = False
-        else:
-            unique_catalog.write(
-                self.catalog_filename, format="ascii.ecsv", overwrite=True
-            )
+        catalog = vstack(self.cat_components)
+        catalog.write(self.catalog_filename, format="ascii.ecsv", overwrite=True)
         logger.info(
             f"""
               Final concatenated catalog saved to '{self.catalog_filename}'.
-              Total unique sources: {len(unique_catalog)}.
+              Total sources: {len(catalog)}.
               """
         )
 
@@ -170,7 +130,6 @@ class InputCatalog:
         """
         self._generate_master_catalog()
         self._generate_final_catalog()
-        self._janitor()
 
 
 def _cli():
@@ -189,12 +148,6 @@ def _cli():
         default=None,
         required=False,
         help="Output catalog filename (default: determined from the observation plan)",
-    )
-    parser.add_argument(
-        "--chunk-size",
-        type=int,
-        default=0,
-        help="Chunk size for writing the final catalog (default: 0, disables chunking)",
     )
     parser.add_argument(
         "--master-ra",
@@ -216,12 +169,9 @@ def _cli():
     )
     args = parser.parse_args()
 
-    chunk_size = args.chunk_size if args.chunk_size > 0 else None
-
     input_catalog = InputCatalog(
         obs_plan_filename=args.obs_plan,
         output_catalog_filename=args.output_filename,
-        chunk_size=chunk_size,
         master_ra=args.master_ra,
         master_dec=args.master_dec,
         master_radius=args.master_radius,

@@ -11,7 +11,6 @@ def test_init_with_master_values(mock_read_obs_plan, mock_plan):
     cat = InputCatalog(
         obs_plan_filename="dummy.ecsv",
         output_catalog_filename="output.ecsv",
-        chunk_size=100,
         master_ra=10.0,
         master_dec=20.0,
         master_radius=1.0,
@@ -20,7 +19,6 @@ def test_init_with_master_values(mock_read_obs_plan, mock_plan):
     assert cat.master_dec == 20.0
     assert cat.master_radius == 1.0
     assert cat.catalog_filename == "output.ecsv"
-    assert cat.chunk_size == 100
 
 
 @patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
@@ -30,7 +28,6 @@ def test_init_computes_master_values(mock_read_obs_plan, mock_plan):
     cat = InputCatalog(
         obs_plan_filename="dummy.ecsv",
         output_catalog_filename=None,
-        chunk_size=None,
         master_ra=None,
         master_dec=None,
         master_radius=None,
@@ -38,15 +35,3 @@ def test_init_computes_master_values(mock_read_obs_plan, mock_plan):
     assert cat.master_ra == pytest.approx(10.0)
     assert cat.master_dec == pytest.approx(20.0)
     assert cat.catalog_filename == catalog_name
-
-
-@patch("roman_simulate_dr.scripts.generate_input_catalog.Path.unlink")
-def test_janitor_removes_files(mock_unlink):
-    cat = InputCatalog.__new__(InputCatalog)
-    cat.cat_component_filenames = ["file1.ecsv", "file2.ecsv"]
-    with patch(
-        "roman_simulate_dr.scripts.generate_input_catalog.Path.exists",
-        return_value=True,
-    ):
-        cat._janitor()
-    assert mock_unlink.call_count == 2
