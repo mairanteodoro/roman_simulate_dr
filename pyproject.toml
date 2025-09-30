@@ -87,6 +87,7 @@ exclude = [
 ]
 ignore = [
     "E741", # ambiguous variable name
+    "S101", # use of assert detected
 ]
 
 [tool.cibuildwheel.macos]
