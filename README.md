@@ -56,9 +56,9 @@ should be in ECSV format and contain the following columns:
 ```
 
 Below is an example of how the content of the observation plan file should
-look like for a program that contains two passes (one with PA=0 deg and other
-with PA=90 deg) with two visits each (shifted by 90\"), and one exposure in
-each visit (using all filters).
+look like for a program that contains two passes (one with $\text{PA}=0^\circ$ and another
+with $\text{PA}=90^\circ$) with two visits each (shifted by $90$\" in both axes), and one
+exposure in each visit (using all filters).
 
 ```
 RA DEC PA BANDPASS MA_TABLE_NUMBER DURATION PLAN PASS SEGMENT OBSERVATION VISIT EXPOSURE
