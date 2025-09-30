@@ -180,8 +180,8 @@ def _cli():
     parser.add_argument(
         "--obs-plan",
         type=str,
-        default="obs_plan.toml",
-        help="Observation plan filename (default: obs_plan.toml)",
+        default="obs_plan.ecsv",
+        help="Observation plan filename (default: obs_plan.ecsv)",
     )
     parser.add_argument(
         "--output-filename",
