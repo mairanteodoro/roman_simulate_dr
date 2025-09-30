@@ -1,7 +1,11 @@
 import argparse
 import logging
 
-from roman_simulate_dr.scripts.utils import parallelize_jobs, read_obs_plan
+from roman_simulate_dr.scripts.utils import (
+    generate_roman_filename,
+    parallelize_jobs,
+    read_obs_plan,
+)
 
 # Setup logger
 logging.basicConfig(
@@ -69,6 +73,7 @@ class RomanisimImages:
             date,
             "--rng_seed",
             "1",
+            "--usecrds",
             *(["--drop-extra-dq"] if drop_extra_dq else []),
             output_filename,
         ]
@@ -86,10 +91,8 @@ class RomanisimImages:
         Run the romanisim simulation workflow for all passes and visits in the plan.
         """
         jobs = []
-        for p in self.plan["passes"]:
-            pass_name = p.get("name", "pass")
-            for v in p.get("visits", []):
-                visit_name = v.get("name", "visit")
+        for pidx, p in enumerate(self.plan["passes"]):
+            for vidx, v in enumerate(p.get("visits", [])):
                 ra_ref = v.get("lon")
                 dec_ref = v.get("lat")
                 logger.info(f"pass: {p['name']}, visit: {v['name']}")
@@ -99,7 +102,18 @@ class RomanisimImages:
                     for sca in e.get("sca_ids"):
                         for filt in e.get("filter_names"):
                             bandpass = filt.upper()
-                            output_filename = f"{pass_name}_{visit_name}_exp{eidx}_wfi{sca:02}_{bandpass}_uncal.asdf"
+                            output_filename = generate_roman_filename(
+                                program=1,
+                                plan=1,
+                                passno=int(pidx),
+                                segment=1,
+                                observation=1,
+                                visit=int(vidx),
+                                exposure=int(eidx),
+                                sca=int(sca),
+                                bandpass=bandpass,
+                                suffix="uncal",
+                            )
                             jobs.append(
                                 dict(
                                     radec=(ra_ref, dec_ref),

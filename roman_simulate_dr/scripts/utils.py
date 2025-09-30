@@ -83,12 +83,26 @@ def parallelize_jobs(method, jobs, max_workers: int | None = None):
             futures = [executor.submit(method, **job) for job in jobs]
             for future, job in zip(as_completed(futures), jobs, strict=False):
                 future.result()
-                logger.info(
-                    f" -> Saved temporary catalog to {job.get('output_catalog_filename', '<unknown>')}."
-                )
     else:
         for job in jobs:
             method(**job)
-            logger.info(
-                f" -> Saved temporary catalog to {job.get('output_catalog_filename', '<unknown>')}."
-            )
+
+
+def generate_roman_filename(
+    program: int,
+    plan: int,
+    passno: int,
+    segment: int,
+    observation: int,
+    visit: int,
+    exposure: int,
+    sca: int,
+    bandpass: str,
+    suffix: str,
+) -> str:
+    filename = (
+        f"r{program}{plan:02d}{passno:03d}{segment:03d}"
+        f"{observation:03d}{visit:03d}_{exposure:04d}"
+        f"_wfi{sca:02d}_{bandpass.lower()}_{suffix}.asdf"
+    )
+    return filename
