@@ -6,7 +6,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import vstack
 from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
 
-from roman_simulate_dr.scripts.utils import read_obs_plan, generate_catalog_name
+from roman_simulate_dr.scripts.utils import generate_catalog_name, read_obs_plan
 
 logging.basicConfig(
     level=logging.INFO,
