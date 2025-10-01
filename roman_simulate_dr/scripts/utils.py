@@ -1,6 +1,6 @@
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from itertools import groupby
 
 from astropy.table import Table
 
@@ -8,57 +8,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def read_obs_plan(filename: str):
+def read_obs_plan(filename: str) -> Table:
     """
-    Reads an observation plan from an ECSV file and returns a dictionary
-    structured with passes and visits for compatibility with InputCatalog.
+    Reads an observation plan from an ECSV file.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the ECSV file.
+
+    Returns
+    -------
+    astropy.table.Table
+        The observation plan as an Astropy Table.
     """
-    table = Table.read(filename, format="ascii.ecsv")
-    # Group by PLAN and PASS
-    passes = []
-    for (plan, pass_num), pass_rows in groupby(
-        sorted(table, key=lambda row: (row["PLAN"], row["PASS"])),
-        key=lambda row: (row["PLAN"], row["PASS"]),
-    ):
-        pass_rows = list(pass_rows)
-        pass_dict = {
-            "name": f"plan_{plan}_pass_{pass_num}",
-            "plan": plan,
-            "pass": pass_num,
-            "roll": float(pass_rows[0]["PA"]),
-            "visits": [],
-        }
-        # Group by VISIT within each pass
-        for visit_num, visit_rows in groupby(
-            sorted(pass_rows, key=lambda row: row["VISIT"]),
-            key=lambda row: row["VISIT"],
-        ):
-            visit_rows = list(visit_rows)
-            visit_dict = {
-                "name": f"visit_{visit_num}",
-                "lon": float(visit_rows[0]["RA"]),
-                "lat": float(visit_rows[0]["DEC"]),
-                "exposures": [
-                    {
-                        "filter_names": [row["BANDPASS"]],
-                        "sca_ids": [1],
-                        "duration": int(row["DURATION"]),
-                        "ma_table_number": int(row["MA_TABLE_NUMBER"]),
-                        "segment": int(row["SEGMENT"]),
-                        "observation": int(row["OBSERVATION"]),
-                        "exposure": int(row["EXPOSURE"]),
-                    }
-                    for row in visit_rows
-                ],
-            }
-            pass_dict["visits"].append(visit_dict)
-        passes.append(pass_dict)
-    # Extract romanisim_input_catalog_name (i.e., the output catalog filename) from filename
-    plan_dict = {
-        "passes": passes,
-        "romanisim_input_catalog_name": filename.replace(".ecsv", "_cat.ecsv"),
-    }
-    return plan_dict
+    return Table.read(filename, format="ascii.ecsv")
 
 
 def parallelize_jobs(method, jobs, max_workers: int | None = None):
@@ -68,11 +32,11 @@ def parallelize_jobs(method, jobs, max_workers: int | None = None):
     Parameters
     ----------
     method : callable
-        The function or method to execute.
+        The function or method to execute for each job.
     jobs : list of dict
         Each dict contains the keyword arguments for one call to `method`.
-    max_workers : int
-        Number of parallel workers.
+    max_workers : int or None, optional
+        Number of parallel workers. If None or <= 1, jobs are run sequentially.
 
     Returns
     -------
@@ -81,7 +45,7 @@ def parallelize_jobs(method, jobs, max_workers: int | None = None):
     if max_workers and max_workers > 1:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(method, **job) for job in jobs]
-            for future, job in zip(as_completed(futures), jobs, strict=False):
+            for future, _ in zip(as_completed(futures), jobs, strict=False):
                 future.result()
     else:
         for job in jobs:
@@ -100,9 +64,62 @@ def generate_roman_filename(
     bandpass: str,
     suffix: str,
 ) -> str:
+    """
+    Generate a standardized Roman filename based on observation parameters.
+
+    The filename encodes key metadata about the observation, including program,
+    plan, pass number, segment, observation, visit, exposure, SCA, bandpass, and
+    a custom suffix.
+
+    Parameters
+    ----------
+    program : int
+        Program identifier.
+    plan : int
+        Plan identifier.
+    passno : int
+        Pass number.
+    segment : int
+        Segment number.
+    observation : int
+        Observation number.
+    visit : int
+        Visit number.
+    exposure : int
+        Exposure number.
+    sca : int
+        Sensor Chip Assembly (SCA) number.
+    bandpass : str
+        Bandpass filter name (will be converted to lowercase).
+    suffix : str
+        Custom suffix to append to the filename.
+
+    Returns
+    -------
+    str
+        The generated Roman filename encoding all provided parameters.
+    """
     filename = (
         f"r{program}{plan:02d}{passno:03d}{segment:03d}"
         f"{observation:03d}{visit:03d}_{exposure:04d}"
         f"_wfi{sca:02d}_{bandpass.lower()}_{suffix}.asdf"
     )
     return filename
+
+
+def generate_catalog_name(obs_plan_filename: str) -> str:
+    """
+    Generate a catalog filename by appending '_cat' before the file extension.
+
+    Parameters
+    ----------
+    obs_plan_filename : str
+        The observation plan filename.
+
+    Returns
+    -------
+    str
+        The derived catalog filename.
+    """
+    base, ext = os.path.splitext(obs_plan_filename)
+    return f"{base}_cat{ext}"

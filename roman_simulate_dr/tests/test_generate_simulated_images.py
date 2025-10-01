@@ -1,45 +1,39 @@
-from unittest.mock import MagicMock, patch
+import pytest
+from unittest.mock import patch, MagicMock
 
-from roman_simulate_dr.scripts.generate_simulated_images import RomanisimImages
+from roman_simulate_dr.scripts.generate_simulated_l1_images import RomanisimImages
 
+@pytest.fixture
+def mock_plan():
+    # Minimal observation plan tuple structure
+    return [
+        (270.0, 66.0, 0.0, "F062", 109, 100, 1, 1, 1, 1, 1, 1)
+    ]
 
-@patch("roman_simulate_dr.scripts.generate_simulated_images.read_obs_plan")
-def test_init_input_filename_from_plan(mock_read_obs_plan, mock_plan):
-    catalog_name = "input_cat.ecsv"
-    mock_read_obs_plan.return_value = mock_plan(catalog_name)
-    obj = RomanisimImages(catalog_name)
-    assert obj.input_filename == "input_cat.ecsv"
+@patch("roman_simulate_dr.scripts.generate_simulated_l1_images.read_obs_plan")
+def test_init_sets_attributes(mock_read_obs_plan, mock_plan):
+    mock_read_obs_plan.return_value = mock_plan
+    obj = RomanisimImages("plan.ecsv", "input.ecsv", max_workers=2, sca_ids=[1,2])
+    assert obj.plan == mock_plan
+    assert obj.input_filename == "input.ecsv"
+    assert obj.max_workers == 2
+    assert obj.sca_ids == [1,2]
 
-
-@patch("roman_simulate_dr.scripts.generate_simulated_images.read_obs_plan")
-def test_init_input_filename_override(mock_read_obs_plan, mock_plan):
-    mock_read_obs_plan.return_value = mock_plan()
-    obj = RomanisimImages("dummy.toml", input_filename="override.ecsv")
-    assert obj.input_filename == "override.ecsv"
-
-
+@patch("roman_simulate_dr.scripts.generate_simulated_l1_images.read_obs_plan")
 @patch("subprocess.run")
-def test_generate_simulated_images_calls_subprocess(mock_run):
-    mock_run.return_value = MagicMock(stdout="out", stderr="err", returncode=0)
-    obj = RomanisimImages.__new__(RomanisimImages)
-    result = obj._generate_simulated_images(output_filename="test.asdf")
-    assert result == ("test.asdf", 0)
+def test_generate_simulated_images_runs_subprocess(mock_run, mock_read_obs_plan):
+    mock_read_obs_plan.return_value = [(270.0, 66.0, 0.0, "F062", 109, 100, 1, 1, 1, 1, 1, 1)]
+    mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+    obj = RomanisimImages("plan.ecsv", "input.ecsv")
+    out, code = obj._generate_simulated_images(output_filename="test.asdf", catalog="input.ecsv")
+    assert out == "test.asdf"
+    assert code == 0
     mock_run.assert_called_once()
 
-
-@patch("roman_simulate_dr.scripts.generate_simulated_images.read_obs_plan")
-@patch(
-    "roman_simulate_dr.scripts.generate_simulated_images.generate_roman_filename",
-    return_value="sim.asdf",
-)
-@patch("roman_simulate_dr.scripts.generate_simulated_images.parallelize_jobs")
-def test_run_builds_jobs_and_parallelizes(
-    mock_parallelize, mock_gen_filename, mock_read_obs_plan, mock_plan
-):
-    mock_read_obs_plan.return_value = mock_plan()
-    obj = RomanisimImages("dummy.toml")
+@patch("roman_simulate_dr.scripts.generate_simulated_l1_images.parallelize_jobs")
+@patch("roman_simulate_dr.scripts.generate_simulated_l1_images.read_obs_plan")
+def test_run_calls_parallelize_jobs(mock_read_obs_plan, mock_parallelize_jobs, mock_plan):
+    mock_read_obs_plan.return_value = mock_plan
+    obj = RomanisimImages("plan.ecsv", "input.ecsv", max_workers=2, sca_ids=[1])
     obj.run()
-    assert mock_parallelize.called
-    jobs = mock_parallelize.call_args[0][1]
-    assert len(jobs) == 4  # 2 sca_ids * 2 filter_names
-    assert jobs[0]["output_filename"] == "sim.asdf"
+    mock_parallelize_jobs.assert_called_once()

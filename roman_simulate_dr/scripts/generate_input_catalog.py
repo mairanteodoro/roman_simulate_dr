@@ -6,7 +6,7 @@ from astropy.coordinates import SkyCoord
 from astropy.table import vstack
 from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
 
-from roman_simulate_dr.scripts.utils import read_obs_plan
+from roman_simulate_dr.scripts.utils import read_obs_plan, generate_catalog_name
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,18 +18,20 @@ logger = logging.getLogger(__name__)
 class InputCatalog:
     """
     Class to generate Romanisim input catalogs based on an observation plan.
+
     Parameters
     ----------
     obs_plan_filename : str
-        Path to the observation plan TOML file.
+        Path to the observation plan file.
     output_catalog_filename : str or None, optional
-        Filename for the final output catalog.
+        Filename for the final output catalog. If None, the filename will be derived
+        from obs_plan_filename by appending '_cat' before the file extension.
     master_ra : float or None, optional
-        Override for the master RA (deg) of the whole survey/catalog.
+        Override for the master RA (deg) of the whole catalog.
     master_dec : float or None, optional
-        Override for the master Dec (deg) of the whole survey/catalog.
+        Override for the master Dec (deg) of the whole catalog.
     master_radius : float or None, optional
-        Override for the master radius (deg) of the whole survey/catalog.
+        Override for the master radius (deg) of the whole catalog.
     """
 
     def __init__(
@@ -44,42 +46,20 @@ class InputCatalog:
         if output_catalog_filename is not None:
             self.catalog_filename = output_catalog_filename
         else:
-            self.catalog_filename = self.plan.get("romanisim_input_catalog_name")
+            self.catalog_filename = generate_catalog_name(obs_plan_filename)
 
-        # Determine the master catalog center/size
-        if (
-            master_ra is not None
-            and master_dec is not None
-            and master_radius is not None
-        ):
-            self.master_ra = master_ra
-            self.master_dec = master_dec
-            self.master_radius = master_radius
-        else:
-            # Compute bounding circle for all visits if not provided
-            visits = [
-                (v.get("lon"), v.get("lat"))
-                for p in self.plan["passes"]
-                for v in p.get("visits", [])
-                if v.get("lon") is not None and v.get("lat") is not None
-            ]
-            if not visits:
-                raise RuntimeError(
-                    "No visits with lon/lat found in the observation plan."
-                )
-            # crude average for center
-            ra_vals = np.array([v[0] for v in visits])
-            dec_vals = np.array([v[1] for v in visits])
-            self.master_ra = float(np.mean(ra_vals))
-            self.master_dec = float(np.mean(dec_vals))
-            # crude max separation for radius
-            coords = SkyCoord(ra=ra_vals, dec=dec_vals, unit="deg", frame="icrs")
-            max_sep = np.max(
-                coords.separation(
-                    SkyCoord(self.master_ra, self.master_dec, unit="deg")
-                ).deg
-            )
-            self.master_radius = float(max_sep + 0.3)  # add margin to cover all visits
+        # set reference coordinates and radius to simulate
+        self.master_ra = (
+            master_ra
+            if master_ra is not None
+            else float(np.mean(np.array(self.plan["RA"])))
+        )
+        self.master_dec = (
+            master_dec
+            if master_dec is not None
+            else float(np.mean(np.array(self.plan["DEC"])))
+        )
+        self.master_radius = master_radius if master_radius is not None else 0.3
 
     def _generate_master_catalog(self, filter_list=None):
         """
@@ -91,10 +71,12 @@ class InputCatalog:
         if filter_list is None:
             filter_list = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
         bandpasses = [bp.upper() for bp in filter_list]
+
         coords = SkyCoord(
             ra=self.master_ra, dec=self.master_dec, unit="deg", frame="icrs"
         )
 
+        # compute components
         gal_cat = make_cosmos_galaxies(
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.master_radius
         )
@@ -108,14 +90,11 @@ class InputCatalog:
             seed=42,
             radius=self.master_radius,
         )
-        self.cat_components = [gal_cat, gaia_star_cat, star_cat]
 
-    def _generate_final_catalog(self):
-        """
-        Concatenate all component catalogs and write the final catalog.
-        """
-        catalog = vstack(self.cat_components)
+        # concatenate and save
+        catalog = vstack([gal_cat, gaia_star_cat, star_cat])
         catalog.write(self.catalog_filename, format="ascii.ecsv", overwrite=True)
+
         logger.info(
             f"""
               Final concatenated catalog saved to '{self.catalog_filename}'.
@@ -129,7 +108,6 @@ class InputCatalog:
         This method creates a single master catalog for all exposures.
         """
         self._generate_master_catalog()
-        self._generate_final_catalog()
 
 
 def _cli():
@@ -147,7 +125,7 @@ def _cli():
         type=str,
         default=None,
         required=False,
-        help="Output catalog filename (default: determined from the observation plan)",
+        help="Output catalog filename (default: append '_cat' to the observation plan filename)",
     )
     parser.add_argument(
         "--master-ra",
@@ -164,8 +142,8 @@ def _cli():
     parser.add_argument(
         "--master-radius",
         type=float,
-        default=None,
-        help="Override: Radius of master catalog (deg)",
+        default=0.3,
+        help="Override: Radius of master catalog (deg; default 0.3)",
     )
     args = parser.parse_args()
 

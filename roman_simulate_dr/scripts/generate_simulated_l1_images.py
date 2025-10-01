@@ -7,7 +7,6 @@ from roman_simulate_dr.scripts.utils import (
     read_obs_plan,
 )
 
-# Setup logger
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(processName)s %(message)s",
@@ -16,21 +15,25 @@ logger = logging.getLogger(__name__)
 
 
 class RomanisimImages:
+    """
+    Handles generation of simulated Roman L1 images based on an observation plan and input catalog.
+    """
+
     def __init__(
         self,
         obs_plan_filename: str,
-        input_filename: str | None = None,
+        input_filename: str,
         max_workers: int | None = None,
+        sca_ids: list[int] | None = None,
     ):
+        if not obs_plan_filename:
+            raise ValueError("An observation plan filename must be provided.")
+        if not input_filename:
+            raise ValueError("An input catalog filename must be provided.")
         self.plan = read_obs_plan(obs_plan_filename)
-        # Get the output catalog filename either
-        # from the CLI or from the observation plan file
-        if input_filename is not None:
-            self.input_filename = input_filename
-        else:
-            self.input_filename = self.plan.get("romanisim_input_catalog_name")
-
+        self.input_filename = input_filename
         self.max_workers = max_workers
+        self.sca_ids = sca_ids if sca_ids is not None else [1]
 
     def _generate_simulated_images(
         self,
@@ -39,7 +42,7 @@ class RomanisimImages:
         sca: int = 1,
         bandpass: str = "F062",
         roll: float = 0.0,
-        catalog: str = "romanisim_input_cat.ecsv",
+        catalog: str = "",
         stpsf: bool = True,
         ma_table_number: int = 109,
         date: str = "2027-06-01T00:00:00",
@@ -82,7 +85,10 @@ class RomanisimImages:
             cmd, capture_output=True, text=True, shell=False, check=False
         )
         logger.info(f"[{output_filename}] STDOUT:\n{result.stdout}")
-        logger.info(f"[{output_filename}] STDERR:\n{result.stderr}")
+        if result.returncode != 0:
+            logger.error(f"[{output_filename}] STDERR:\n{result.stderr}")
+        else:
+            logger.info(f"[{output_filename}] STDERR:\n{result.stderr}")
 
         return output_filename, result.returncode
 
@@ -91,39 +97,45 @@ class RomanisimImages:
         Run the romanisim simulation workflow for all passes and visits in the plan.
         """
         jobs = []
-        for pidx, p in enumerate(self.plan["passes"]):
-            for vidx, v in enumerate(p.get("visits", [])):
-                ra_ref = v.get("lon")
-                dec_ref = v.get("lat")
-                logger.info(f"pass: {p['name']}, visit: {v['name']}")
-                logger.info(f"  ra_ref: {v['lon']}, dec_ref: {v['lat']}")
-
-                for eidx, e in enumerate(v.get("exposures", [])):
-                    for sca in e.get("sca_ids"):
-                        for filt in e.get("filter_names"):
-                            bandpass = filt.upper()
-                            output_filename = generate_roman_filename(
-                                program=1,
-                                plan=1,
-                                passno=int(pidx),
-                                segment=1,
-                                observation=1,
-                                visit=int(vidx),
-                                exposure=int(eidx),
-                                sca=int(sca),
-                                bandpass=bandpass,
-                                suffix="uncal",
-                            )
-                            jobs.append(
-                                dict(
-                                    radec=(ra_ref, dec_ref),
-                                    sca=sca,
-                                    bandpass=bandpass,
-                                    roll=p.get("roll"),
-                                    catalog=self.input_filename,
-                                    output_filename=output_filename,
-                                )
-                            )
+        for (
+            ra_ref,
+            dec_ref,
+            pa,
+            bandpass,
+            ma_table_number,
+            _,  # duration, not used here
+            plan,
+            pidx,
+            segment,
+            observation,
+            vidx,
+            eidx,
+        ) in self.plan:
+            for sca in self.sca_ids:
+                bandpass = bandpass.upper()
+                output_filename = generate_roman_filename(
+                    program=1,
+                    plan=plan,
+                    passno=int(pidx),
+                    segment=segment,
+                    observation=observation,
+                    visit=int(vidx),
+                    exposure=int(eidx),
+                    sca=int(sca),
+                    bandpass=bandpass,
+                    suffix="uncal",
+                )
+                jobs.append(
+                    dict(
+                        radec=(ra_ref, dec_ref),
+                        sca=sca,
+                        bandpass=bandpass,
+                        roll=pa,
+                        ma_table_number=ma_table_number,
+                        catalog=self.input_filename,
+                        output_filename=output_filename,
+                    )
+                )
         parallelize_jobs(
             self._generate_simulated_images,
             jobs,
@@ -132,21 +144,24 @@ class RomanisimImages:
 
 
 def _cli():
+    """
+    Command-line interface for generating Romanisim simulated images.
+    """
     parser = argparse.ArgumentParser(
         description="Generate Romanisim input catalogs based on an observation plan."
     )
     parser.add_argument(
         "--obs-plan",
         type=str,
-        default="obs_plan.toml",
-        help="Observation plan filename (default: obs_plan.toml)",
+        default="obs_plan.ecsv",
+        help="Observation plan filename (default: obs_plan.ecsv)",
     )
     parser.add_argument(
         "--input-filename",
         type=str,
-        default=None,
+        default="romanisim_input_catalog.ecsv",
         required=False,
-        help="Input catalog filename (default: determined from the observation plan)",
+        help="Input catalog filename (default: romanisim_input_catalog.ecsv)",
     )
     parser.add_argument(
         "--max-workers",
@@ -154,17 +169,21 @@ def _cli():
         default=1,
         help="Number of parallel workers for exposure generation (default: 1, disables parallelization)",
     )
+    parser.add_argument(
+        "--sca-ids",
+        type=int,
+        nargs="+",
+        default=[1],
+        help="List of SCA IDs to simulate (default: [1])",
+    )
     args = parser.parse_args()
-
-    max_workers = args.max_workers if args.max_workers > 1 else None
-
     input_catalog = RomanisimImages(
         obs_plan_filename=args.obs_plan,
         input_filename=args.input_filename,
-        max_workers=max_workers,
+        max_workers=args.max_workers,
+        sca_ids=args.sca_ids,
     )
     input_catalog.run()
-
     logger.info("Done.")
 
 
