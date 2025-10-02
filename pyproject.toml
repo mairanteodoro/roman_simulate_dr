@@ -28,6 +28,7 @@ docs = [
   "sphinx-autobuild",
 ]
 test = ["pytest", "pytest-cov", "tox", "coverage", "romancal"]
+dev = ["roman_simulate_dr[docs,test]", "pre-commit > 3"]
 
 [project.urls]
 tracker = "https://github.com/mairanteodoro/roman_simulate_dr/issues"
