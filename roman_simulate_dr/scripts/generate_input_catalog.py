@@ -1,37 +1,17 @@
 import argparse
-import logging
 
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import vstack
 from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
 
+from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import generate_catalog_name, read_obs_plan
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(processName)s %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 
 class InputCatalog:
     """
     Class to generate Romanisim input catalogs based on an observation plan.
-
-    Parameters
-    ----------
-    obs_plan_filename : str
-        Path to the observation plan file.
-    output_catalog_filename : str or None, optional
-        Filename for the final output catalog. If None, the filename will be derived
-        from obs_plan_filename by appending '_cat' before the file extension.
-    master_ra : float or None, optional
-        Override for the master RA (deg) of the whole catalog.
-    master_dec : float or None, optional
-        Override for the master Dec (deg) of the whole catalog.
-    master_radius : float or None, optional
-        Override for the master radius (deg) of the whole catalog.
     """
 
     def __init__(
@@ -42,6 +22,22 @@ class InputCatalog:
         master_dec: float | None = None,
         master_radius: float | None = None,
     ):
+        """
+        Initialize the InputCatalog object.
+
+        Parameters
+        ----------
+        obs_plan_filename : str
+            Path to the observation plan file.
+        output_catalog_filename : str or None, optional
+            Filename for the final output catalog.
+        master_ra : float or None, optional
+            Override for the master RA (deg) of the whole catalog.
+        master_dec : float or None, optional
+            Override for the master Dec (deg) of the whole catalog.
+        master_radius : float or None, optional
+            Override for the master radius (deg) of the whole catalog.
+        """
         self.plan = read_obs_plan(obs_plan_filename)
         if output_catalog_filename is not None:
             self.catalog_filename = output_catalog_filename
@@ -64,6 +60,11 @@ class InputCatalog:
     def _generate_master_catalog(self, filter_list=None):
         """
         Generate a single catalog covering the full area and keep components in memory.
+
+        Parameters
+        ----------
+        filter_list : list of str or None, optional
+            List of filter names to use for bandpasses. If None, uses default filters.
         """
         logger.info(
             f"Generating master catalog at RA={self.master_ra} Dec={self.master_dec} radius={self.master_radius} deg"
@@ -105,12 +106,18 @@ class InputCatalog:
     def run(self) -> None:
         """
         Run the Romanisim input catalog generation workflow.
+
         This method creates a single master catalog for all exposures.
         """
         self._generate_master_catalog()
 
 
 def _cli():
+    """
+    Command-line interface for generating Romanisim input catalogs.
+
+    Parses arguments and runs the catalog generation workflow.
+    """
     parser = argparse.ArgumentParser(
         description="Generate Romanisim input catalogs based on an observation plan."
     )
@@ -160,4 +167,7 @@ def _cli():
 
 
 if __name__ == "__main__":
+    """
+    Entry point for the script when run as a standalone program.
+    """
     _cli()

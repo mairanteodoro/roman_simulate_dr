@@ -1,17 +1,11 @@
 import argparse
-import logging
 
+from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import (
     generate_roman_filename,
     parallelize_jobs,
     read_obs_plan,
 )
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(processName)s %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 
 class RomanisimImages:
@@ -23,9 +17,28 @@ class RomanisimImages:
         self,
         obs_plan_filename: str,
         input_filename: str,
-        max_workers: int | None = None,
+        max_workers: int = 1,
         sca_ids: list[int] | None = None,
     ):
+        """
+        Initialize the RomanisimImages object.
+
+        Parameters
+        ----------
+        obs_plan_filename : str
+            Path to the observation plan file.
+        input_filename : str
+            Path to the input catalog file.
+        max_workers : int
+            Number of parallel workers to use for processing (default 1).
+        sca_ids : list of int or None, optional
+            List of SCA IDs to use. If None, uses SCA 1.
+
+        Raises
+        ------
+        ValueError
+            If obs_plan_filename or input_filename is not provided.
+        """
         if not obs_plan_filename:
             raise ValueError("An observation plan filename must be provided.")
         if not input_filename:
@@ -33,7 +46,32 @@ class RomanisimImages:
         self.plan = read_obs_plan(obs_plan_filename)
         self.input_filename = input_filename
         self.max_workers = max_workers
-        self.sca_ids = sca_ids if sca_ids is not None else [1]
+        self.sca_ids = self._create_sca_id_list(sca_ids)
+
+    def _create_sca_id_list(self, sca_ids: list[int] | None = None) -> list[int]:
+        """
+        Generate a list of SCA IDs for catalog creation.
+
+        Returns a list of SCA IDs based on the input:
+        - If sca_ids is None, returns [1] (default SCA 1).
+        - If sca_ids is a single negative value, returns all SCA IDs from 1 to 17.
+        - Otherwise, returns the provided sca_ids list.
+
+        Parameters
+        ----------
+        sca_ids : list of int or None, optional
+            List of SCA IDs to use, or None for default behavior.
+
+        Returns
+        -------
+        list of int
+            The list of SCA IDs to use for catalog generation.
+        """
+        if sca_ids is None:
+            return [1]
+        if len(sca_ids) == 1 and sca_ids[0] < 0:
+            return list(range(1, 18))
+        return sca_ids
 
     def _generate_simulated_images(
         self,
@@ -188,4 +226,7 @@ def _cli():
 
 
 if __name__ == "__main__":
+    """
+    Entry point for the script when run as a standalone program.
+    """
     _cli()
