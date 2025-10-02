@@ -4,36 +4,30 @@ description = "Library of data release related tools for the Roman Space Telesco
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
+  { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
 ]
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Astronomy",
-    "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
-    "astropy",
+  "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
+  "astropy",
+  "pandas",
 ]
-dynamic = [
-    "version",
-]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 docs = [
-    "sphinx",
-    "sphinx-astropy",
-    "sphinx-automodapi",
-    "sphinx-rtd-theme",
-    "stsci-rtd-theme",
-    "sphinx-autobuild",
+  "sphinx",
+  "sphinx-astropy",
+  "sphinx-automodapi",
+  "sphinx-rtd-theme",
+  "stsci-rtd-theme",
+  "sphinx-autobuild",
 ]
-test = [
-  "pytest",
-  "pytest-cov",
-  "tox",
-  "coverage",
-]
+test = ["pytest", "pytest-cov", "tox", "coverage", "romancal"]
 
 [project.urls]
 tracker = "https://github.com/mairanteodoro/roman_simulate_dr/issues"
@@ -45,11 +39,7 @@ rdr_generate_input_catalog = "roman_simulate_dr.scripts.generate_input_catalog:_
 rdr_generate_simulated_images = "roman_simulate_dr.scripts.generate_simulated_l1_images:_cli"
 
 [build-system]
-requires = [
-    "setuptools >=60",
-    "setuptools_scm[toml] >=3.4",
-    "wheel",
-]
+requires = ["setuptools >=60", "setuptools_scm[toml] >=3.4", "wheel"]
 build-backend = "setuptools.build_meta"
 
 
@@ -63,14 +53,14 @@ include = ["roman_simulate_dr*"]
 [tool.setuptools.package-data]
 # package_data values are glob patterns relative to each specific subpackage.
 "*" = [
-    "**/*.fits",
-    "**/*.txt",
-    "**/*.inc",
-    "**/*.cfg",
-    "**/*.csv",
-    "**/*.yaml",
-    "**/*.json",
-    "**/*.asdf",
+  "**/*.fits",
+  "**/*.txt",
+  "**/*.inc",
+  "**/*.cfg",
+  "**/*.csv",
+  "**/*.yaml",
+  "**/*.json",
+  "**/*.asdf",
 ]
 
 [tool.ruff]
@@ -78,35 +68,24 @@ line-length = 88
 
 [tool.ruff.lint]
 extend-select = [
-    "UP",   # pyupgrade
-    "I",    # isort
-    "B",    # bugbear
-    "S",    # bandit
-    "RUF",  # ruff specific
-    "NPY",  # numpy lint
+  "UP",  # pyupgrade
+  "I",   # isort
+  "B",   # bugbear
+  "S",   # bandit
+  "RUF", # ruff specific
+  "NPY", # numpy lint
 ]
-exclude = [
-    "jdocs",
-    ".tox",
-    ".eggs",
-    "build",
-]
+exclude = ["jdocs", ".tox", ".eggs", "build"]
 ignore = [
-    "E741", # ambiguous variable name
-    "S101", # use of assert detected
+  "E741", # ambiguous variable name
+  "S101", # use of assert detected
 ]
 
 [tool.cibuildwheel.macos]
-archs = [
-    "x86_64",
-    "arm64",
-]
+archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
-archs = [
-    "auto",
-    "aarch64",
-]
+archs = ["auto", "aarch64"]
 
 [tool.towncrier]
 filename = "CHANGES.rst"
@@ -126,4 +105,3 @@ showcontent = true
 directory = "docs"
 name = "Documentation"
 showcontent = true
-
