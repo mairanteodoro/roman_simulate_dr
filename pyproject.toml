@@ -15,6 +15,7 @@ dependencies = [
   "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
   "astropy",
   "pandas",
+  "roman-photoz @ git+https://github.com/mairanteodoro/roman_photoz.git@RCAL-1168",
 ]
 dynamic = ["version"]
 
@@ -36,7 +37,7 @@ documentation = "https://roman-data-release.readthedocs.io/en/stable/"
 repository = "https://github.com/mairanteodoro/roman_simulate_dr"
 
 [project.scripts]
-rdr_generate_input_catalog = "roman_simulate_dr.scripts.generate_input_catalog:_cli"
+rdr_generate_input_catalog = "roman_simulate_dr.scripts.generate_input_catalog:main"
 rdr_generate_simulated_images = "roman_simulate_dr.scripts.generate_simulated_l1_images:_cli"
 
 [build-system]
