@@ -15,7 +15,7 @@ dependencies = [
   "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
   "astropy",
   "pandas",
-  "roman-photoz @ git+https://github.com/mairanteodoro/roman_photoz.git@RCAL-1168",
+  "roman-photoz @ git+https://github.com/spacetelescope/roman_photoz.git@main",
 ]
 dynamic = ["version"]
 
