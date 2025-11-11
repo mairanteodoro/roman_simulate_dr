@@ -114,7 +114,6 @@ class RomanisimImages:
             date,
             "--rng_seed",
             "1",
-            "--usecrds",
             *(["--drop-extra-dq"] if drop_extra_dq else []),
             output_filename,
         ]

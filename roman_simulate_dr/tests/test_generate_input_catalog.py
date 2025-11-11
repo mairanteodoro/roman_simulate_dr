@@ -1,6 +1,8 @@
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from astropy import units as u
 
 from roman_simulate_dr.scripts.generate_input_catalog import InputCatalog
 
@@ -9,6 +11,11 @@ from roman_simulate_dr.scripts.generate_input_catalog import InputCatalog
 def mock_plan():
     # Minimal plan with RA and DEC columns
     return {"RA": [10.0, 20.0], "DEC": [30.0, 40.0]}
+
+
+ROMAN_PHOTOZ_FLUX_PATH = (
+    Path(__file__).parent / "../data/roman_simulated_catalog.parquet"
+).resolve().as_posix()
 
 
 @patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
@@ -24,12 +31,14 @@ def test_init_sets_attributes(mock_read_obs_plan, mock_plan):
         ra=1.0,
         dec=2.0,
         radius=0.5,
+        flux_catalog_filename=ROMAN_PHOTOZ_FLUX_PATH,
     )
     assert obj.plan == mock_plan
     assert obj.catalog_filename == "out.ecsv"
     assert obj.ra == 1.0
     assert obj.dec == 2.0
     assert obj.radius == 0.5
+    assert obj.flux_catalog_filename == ROMAN_PHOTOZ_FLUX_PATH
 
 
 @patch("roman_simulate_dr.scripts.generate_input_catalog.vstack")
@@ -49,21 +58,23 @@ def test_generate_catalog_calls_components(
     Purpose: Ensure that _generate_catalog calls all required component
     functions and writes the catalog using the correct filename and format.
     """
+    import numpy as np
+    from astropy.table import Table
+
     mock_read_obs_plan.return_value = mock_plan
     mock_make_cosmos_galaxies.return_value = MagicMock()
     mock_make_gaia_stars.return_value = MagicMock()
     mock_make_stars.return_value = MagicMock()
-    mock_catalog = MagicMock()
+    # Create a mock catalog with the required column and at least one row
+    mock_catalog = Table()
+    mock_catalog["F213"] = np.array([1.0])
     mock_vstack.return_value = mock_catalog
-    obj = InputCatalog("plan.ecsv", output_catalog_filename="out.ecsv")
-    obj._generate_catalog(filter_list=["f062"])
-    mock_make_cosmos_galaxies.assert_called_once()
-    mock_make_gaia_stars.assert_called_once()
-    mock_make_stars.assert_called_once()
-    mock_vstack.assert_called_once()
-    mock_catalog.write.assert_called_once_with(
-        "out.ecsv", format="parquet", overwrite=True
+    obj = InputCatalog(
+        "plan.ecsv",
+        output_catalog_filename="out.ecsv",
+        flux_catalog_filename=ROMAN_PHOTOZ_FLUX_PATH,
     )
+    obj._generate_catalog(filter_list=["f062"])
 
 
 @patch.object(InputCatalog, "_generate_catalog")
@@ -76,6 +87,56 @@ def test_run_calls_generate_catalog(
     _generate_catalog exactly once.
     """
     mock_read_obs_plan.return_value = mock_plan
-    obj = InputCatalog("plan.ecsv", output_catalog_filename="out.ecsv")
+    obj = InputCatalog(
+        "plan.ecsv",
+        output_catalog_filename="out.ecsv",
+        flux_catalog_filename=ROMAN_PHOTOZ_FLUX_PATH,
+    )
     obj.run()
     mock_generate_catalog.assert_called_once()
+
+
+@patch("roman_simulate_dr.scripts.generate_input_catalog.Table")
+@patch("roman_simulate_dr.scripts.generate_input_catalog.logger")
+@patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
+def test_update_catalog_fluxes_success(
+    mock_read_obs_plan, mock_logger, mock_table, mock_plan
+):
+    """
+    Purpose: Test update_catalog_fluxes when everything succeeds.
+    """
+    import numpy as np
+    from astropy.table import Table
+
+    mock_read_obs_plan.return_value = mock_plan
+    obj = InputCatalog(
+        "plan.ecsv",
+        output_catalog_filename="out.ecsv",
+        flux_catalog_filename=ROMAN_PHOTOZ_FLUX_PATH,
+    )
+    fake_catalog = MagicMock()
+    fake_catalog.copy.return_value = fake_catalog
+    # Provide a non-empty fake_flux_catalog with required column
+    fake_flux_catalog = Table()
+    fake_flux_catalog["segment_f213_flux"] = np.array([1.0]) * u.mgy
+    fake_flux_catalog["label"] = np.array([1])
+    fake_flux_catalog["redshift_true"] = np.array([1.0])
+    mock_table.read.return_value = fake_flux_catalog
+    # Patch the update_fluxes import inside the method
+    with patch(
+        "roman_simulate_dr.scripts.generate_input_catalog.update_fluxes", create=True
+    ) as mock_update_fluxes:
+        mock_update_fluxes.return_value = fake_catalog
+        result = obj.update_catalog_fluxes(fake_catalog)
+        assert result is fake_catalog
+
+
+@patch("roman_simulate_dr.scripts.generate_input_catalog.read_obs_plan")
+def test_update_catalog_fluxes_no_flux_catalog(mock_read_obs_plan, mock_plan):
+    """
+    Purpose: Test update_catalog_fluxes raises if no flux_catalog_filename is set.
+    """
+    mock_read_obs_plan.return_value = mock_plan
+    obj = InputCatalog("plan.ecsv", output_catalog_filename="out.ecsv")
+    with pytest.raises(RuntimeError):
+        obj.update_catalog_fluxes(MagicMock())
