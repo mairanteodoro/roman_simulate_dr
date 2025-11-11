@@ -15,7 +15,8 @@ dependencies = [
   "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
   "astropy",
   "pandas",
-  "roman-photoz @ git+https://github.com/spacetelescope/roman_photoz.git@main",
+  "numpy >=2.0.0",
+  "romancal @ git+https://github.com/spacetelescope/romancal.git@main",
 ]
 dynamic = ["version"]
 
@@ -28,7 +29,13 @@ docs = [
   "stsci-rtd-theme",
   "sphinx-autobuild",
 ]
-test = ["pytest", "pytest-cov", "tox", "coverage", "romancal"]
+test = [
+  "pytest",
+  "pytest-cov",
+  "tox",
+  "coverage",
+  "roman-photoz @ git+https://github.com/spacetelescope/roman_photoz.git@main",
+]
 dev = ["roman_simulate_dr[docs,test]", "pre-commit > 3"]
 
 [project.urls]
