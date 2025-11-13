@@ -16,6 +16,7 @@ dependencies = [
   "astropy",
   "pandas",
   "numpy >=2.0.0",
+  "stpsf",
   "romancal @ git+https://github.com/spacetelescope/romancal.git@main",
 ]
 dynamic = ["version"]
