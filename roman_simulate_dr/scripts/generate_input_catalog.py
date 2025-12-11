@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
-from romanisim.catalog import make_cosmos_galaxies, make_gaia_stars, make_stars
+from romanisim.catalog import make_cosmos_galaxies, make_stars, read_catalog
 
 from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import generate_catalog_name, read_obs_plan
@@ -81,8 +81,12 @@ class InputCatalog:
         gal_cat = make_cosmos_galaxies(
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
         )
-        gaia_star_cat = make_gaia_stars(
-            coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
+        gaia_star_cat = read_catalog(
+            "/grp/roman/gaia/healpix128",
+            coord=coords,
+            bandpasses=bandpasses,
+            # seed=42,
+            radius=self.radius,
         )
         star_cat = make_stars(
             coord=coords,
