@@ -3,7 +3,12 @@ import argparse
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
-from romanisim.catalog import make_cosmos_galaxies, make_stars, read_catalog
+from romanisim.catalog import (
+    make_cosmos_galaxies,
+    make_gaia_stars,
+    make_stars,
+    read_catalog,
+)
 
 from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import generate_catalog_name, read_obs_plan
@@ -72,7 +77,16 @@ class InputCatalog:
             f"Generating catalog at RA={self.ra} Dec={self.dec} radius={self.radius} deg"
         )
         if filter_list is None:
-            filter_list = ["f062", "f087", "f106", "f129", "f158", "f184", "f213"]
+            filter_list = [
+                "f062",
+                "f087",
+                "f106",
+                "f129",
+                "f146",
+                "f158",
+                "f184",
+                "f213",
+            ]
         bandpasses = [bp.upper() for bp in filter_list]
 
         coords = SkyCoord(ra=self.ra, dec=self.dec, unit="deg", frame="icrs")
@@ -81,13 +95,21 @@ class InputCatalog:
         gal_cat = make_cosmos_galaxies(
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
         )
-        gaia_star_cat = read_catalog(
-            "/grp/roman/gaia/healpix128",
-            coord=coords,
-            bandpasses=bandpasses,
-            # seed=42,
-            radius=self.radius,
-        )
+        try:
+            gaia_star_cat = make_gaia_stars(
+                coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
+            )
+        except Exception as e:
+            logger.warning(
+                f"make_gaia_stars failed with error: {e}. Falling back to read_catalog."
+            )
+            gaia_star_cat = read_catalog(
+                "/grp/roman/gaia/healpix128",
+                coord=coords,
+                bandpasses=bandpasses,
+                # seed=42,
+                radius=self.radius,
+            )
         star_cat = make_stars(
             coord=coords,
             n=1000,
@@ -149,19 +171,26 @@ class InputCatalog:
             )
             raise
 
-        # import the helper that performs the update (keep import local to avoid
+        # import the helpers that perform the update (keep import local to avoid
         # forcing roman_photoz to be installed when users just want to generate catalogs).
         try:
-            from roman_photoz.update_romanisim_catalog_fluxes import update_fluxes
+            from roman_photoz.update_romanisim_catalog_fluxes import (
+                create_random_catalog,
+                update_fluxes,
+            )
         except Exception:
             logger.error(
-                "Failed to import 'update_fluxes' from roman_photoz. "
+                "Failed to import modules from roman_photoz. "
                 "If you want to update fluxes using a roman_photoz output file, "
                 "please ensure the 'roman_photoz' package is installed and importable."
             )
             raise
 
         try:
+            # create same number of entries in both catalogs for updating
+            flux_catalog = create_random_catalog(flux_catalog, n=len(catalog), seed=42)
+
+            # additional columns (e.g., label, redshift_true) are added here
             updated = update_fluxes(target_catalog=catalog, flux_catalog=flux_catalog)
         except Exception as exc:
             logger.error(f"Failed to update catalog fluxes: {exc}")
@@ -171,13 +200,13 @@ class InputCatalog:
         updated.write(self.catalog_filename, format="parquet", overwrite=True)
         return updated
 
-    def run(self) -> None:
+    def run(self, filter_list=None) -> None:
         """
         Run the Romanisim input catalog generation workflow.
 
         This method creates a single catalog for all exposures.
         """
-        self._generate_catalog()
+        self._generate_catalog(filter_list=filter_list)
 
 
 def _cli():
@@ -227,6 +256,13 @@ def _cli():
         required=False,
         help="Path to a flux_catalog file produced by roman_photoz (parquet). If provided, the generated catalog will be updated using this file.",
     )
+    parser.add_argument(
+        "--filter-list",
+        type=str,
+        nargs="+",
+        default=None,
+        help="List of filter names to use for bandpasses (default: all Roman WFI filters)",
+    )
     args = parser.parse_args()
 
     input_catalog = InputCatalog(
@@ -237,7 +273,7 @@ def _cli():
         radius=args.radius,
         flux_catalog_filename=args.flux_catalog,
     )
-    input_catalog.run()
+    input_catalog.run(args.filter_list)
 
     logger.info("Done.")
 
