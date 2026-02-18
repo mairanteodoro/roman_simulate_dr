@@ -17,7 +17,7 @@ dependencies = [
   "pandas",
   "numpy >=2.0.0",
   "stpsf",
-  "romancal @ git+https://github.com/mairanteodoro/romancal.git@RCAL-1175",
+  "romancal",
 ]
 dynamic = ["version"]
 
