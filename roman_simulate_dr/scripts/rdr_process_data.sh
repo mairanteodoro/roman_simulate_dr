@@ -20,25 +20,25 @@ filter_list="f062 f087 f106 f129 f146 f158 f184 f213"
 
 # 1 - create association files for ELP and run roman_elp
 find *_uncal.asdf | xargs -I{} -P8 -n1 strun roman_elp {} \
-  &> dr_logs_elp.log &&
+  &>dr_logs_elp.log &&
 
-# 2 - create the association files for skycells
-./create_skycell_asn.sh ${filter_list} \
-  &> dr_logs_create_skycells_asn.log &&
+  # 2 - create the association files for skycells
+  ./create_skycell_asn.sh ${filter_list} \
+    &>dr_logs_create_skycells_asn.log &&
 
-# 3 - create association files for MOS and run roman_mos
-find . -maxdepth 1 -type f -name 'r00001_*_*_*x*y*_asn.json' | \
+  # 3 - create association files for MOS and run roman_mos
+  find . -maxdepth 1 -type f -name 'r00001_*_*_*x*y*_asn.json' |
   xargs -I{} -P8 -n1 strun roman_mos {} \
-  &> dr_logs_mos.log &&
+    &>dr_logs_mos.log &&
 
-# 4 - create association files for multiband catalog
-multiband_asn *_coadd.asdf \
-  &> dr_logs_multiband_asn.log &&
+  # 4 - create association files for multiband catalog
+  multiband_asn *_coadd.asdf \
+    &>dr_logs_multiband_asn.log &&
 
-# 5 - run MultibandCatalogStep
-find . -maxdepth 1 -type f -name "*.json" -not -name '*_f[0-9][0-9][0-9]_*' | \
-  xargs -I{} -P8 -n1 strun romancal.step.MultibandCatalogStep {} --snr_threshold 5 \
-  &> dr_logs_multiband_catalog_step.log &&
+  # 5 - run MultibandCatalogStep on the full data release JSON files
+  find . -maxdepth 1 -type f -name "*r0_full*.json" -not -name '*_f[0-9][0-9][0-9]_*' |
+  xargs -I{} -P8 -n1 strun romancal.step.MultibandCatalogStep {} \
+    &>dr_logs_multiband_catalog_step.log
 
 # 6 - add mock unique catalog source identifier to each multiband catalog
 # (find all multiband catalog parquet files and add a unique source_id column using astropy Table.
