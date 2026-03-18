@@ -1,4 +1,5 @@
 import argparse
+import gc
 
 import numpy as np
 from astropy.coordinates import SkyCoord
@@ -91,35 +92,43 @@ class InputCatalog:
 
         coords = SkyCoord(ra=self.ra, dec=self.dec, unit="deg", frame="icrs")
 
-        # compute components
-        gal_cat = make_cosmos_galaxies(
+        # 1. Generate Galaxies
+        catalog = make_cosmos_galaxies(
             coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
         )
+        logger.info(f"Galaxies generated. Rows: {len(catalog)}")
+
+        # 2. Add Gaia Stars (and release temp memory)
         try:
-            gaia_star_cat = make_gaia_stars(
+            temp_stars = make_gaia_stars(
                 coord=coords, bandpasses=bandpasses, seed=42, radius=self.radius
             )
         except Exception as e:
-            logger.warning(
-                f"make_gaia_stars failed with error: {e}. Falling back to read_catalog."
-            )
-            gaia_star_cat = read_catalog(
+            logger.warning(f"Gaia stars failed: {e}. Falling back to read_catalog.")
+            temp_stars = read_catalog(
                 "/grp/roman/gaia/healpix128",
                 coord=coords,
                 bandpasses=bandpasses,
-                # seed=42,
                 radius=self.radius,
             )
-        star_cat = make_stars(
+
+        catalog = vstack([catalog, temp_stars])
+        del temp_stars  # Explicitly delete the temporary star table
+        gc.collect()  # Force Python to reclaim that RAM immediately
+
+        # 3. Add General Stars
+        temp_stars = make_stars(
             coord=coords,
             n=1000,
             bandpasses=bandpasses,
             seed=42,
             radius=self.radius,
         )
+        catalog = vstack([catalog, temp_stars])
+        del temp_stars
+        gc.collect()
 
-        # concatenate and save
-        catalog = vstack([gal_cat, gaia_star_cat, star_cat])
+        # 4. Save to Disk
         catalog.write(self.catalog_filename, format="parquet", overwrite=True)
 
         logger.info(
@@ -189,9 +198,14 @@ class InputCatalog:
         try:
             # create same number of entries in both catalogs for updating
             flux_catalog = create_random_catalog(flux_catalog, n=len(catalog), seed=42)
+            gc.collect()  # Clean up any shards left by create_random_catalog
 
             # additional columns (e.g., label, redshift_true) are added here
             updated = update_fluxes(target_catalog=catalog, flux_catalog=flux_catalog)
+            # Clear the old references immediately
+            del catalog
+            del flux_catalog
+            gc.collect()
         except Exception as exc:
             logger.error(f"Failed to update catalog fluxes: {exc}")
             raise
