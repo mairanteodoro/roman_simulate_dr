@@ -22,13 +22,13 @@ python -m generate_input_catalog \
   --output-filename romanisim_input_catalog.parquet \
   --filter-list ${filter_list} \
   --flux-catalog roman_photoz_simulated_catalog_v2.parquet \
-  --radius 1.0
-  &> dr_logs_generate_input_catalog.log &&
+  --radius 0.3
+&>dr_logs_generate_input_catalog.log &&
 
-# 2 - generate L1 image files
-python -m generate_simulated_l1_images \
-  --obs-plan obs_plan.ecsv \
-  --input-filename romanisim_input_catalog.parquet \
-  --sca-ids 1 2 10 11 \
-  --max-workers 16 \
-  &> dr_logs_generate_simulated_l1_images.log
+  # 2 - generate L1 image files
+  python -m generate_simulated_l1_images \
+    --obs-plan obs_plan.ecsv \
+    --input-filename romanisim_input_catalog.parquet \
+    --sca-ids 1 2 10 11 \
+    --max-workers 4 \
+    &>dr_logs_generate_simulated_l1_images.log
