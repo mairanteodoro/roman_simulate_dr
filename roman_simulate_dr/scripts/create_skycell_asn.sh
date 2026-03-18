@@ -15,7 +15,8 @@
 
 # Set product types
 # (using array to avoid issues with word splitting)
-types=(visit pass full NO_TYPE)
+# types=(visit pass full NO_TYPE)
+types=(full)
 
 # Loop over product types
 for base in "${types[@]}"; do
