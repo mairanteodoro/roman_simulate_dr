@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import (
@@ -92,6 +93,9 @@ class RomanisimImages:
         """
         import subprocess
 
+        # 1. Start the clock
+        start_time = time.time()
+
         cmd = [
             "romanisim-make-image",
             "--radec",
@@ -122,11 +126,17 @@ class RomanisimImages:
         result = subprocess.run(
             cmd, capture_output=True, text=True, shell=False, check=False
         )
-        logger.info(f"[{output_filename}] STDOUT:\n{result.stdout}")
+        # 3. Calculate duration
+        end_time = time.time()
+        duration = end_time - start_time
+
+        # 4. Log the result with the time
+        logger.info(f"[{output_filename}] Finished in {duration}.")
+
         if result.returncode != 0:
-            logger.error(f"[{output_filename}] STDERR:\n{result.stderr}")
-        else:
-            logger.info(f"[{output_filename}] STDERR:\n{result.stderr}")
+            logger.error(
+                f"[{output_filename}] FAILED after {duration}. STDERR:\n{result.stderr}"
+            )
 
         return output_filename, result.returncode
 
