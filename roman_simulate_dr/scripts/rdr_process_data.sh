@@ -39,20 +39,3 @@ find *_uncal.asdf | xargs -I{} -P8 -n1 strun roman_elp {} \
   find . -maxdepth 1 -type f -name "*r0_full*.json" -not -name '*_f[0-9][0-9][0-9]_*' |
   xargs -I{} -P8 -n1 strun romancal.step.MultibandCatalogStep {} \
     &>dr_logs_multiband_catalog_step.log
-
-# 6 - add mock unique catalog source identifier to each multiband catalog
-# (find all multiband catalog parquet files and add a unique source_id column using astropy Table.
-# The length of the unique identifier should be 64 bits with signed integer type. Do not use pandas.)
-# find . -maxdepth 1 -type f -name "*_cat.parquet" | \
-#   xargs -I{} -P8 -n1 python -c "
-# import sys
-# from astropy.table import Table
-# import numpy as np
-# # Load the existing catalog
-# cat = Table.read('{}', format='parquet')
-# # Generate a unique source_id for each entry with 64-bit signed integers
-# cat['source_id'] = np.arange(1, len(cat) + 1, dtype=np.int64)
-# # Save the updated catalog back to parquet
-# cat.write('{}', format='parquet', overwrite=True)
-# " \
-#   &> dr_logs_add_source_id.log
