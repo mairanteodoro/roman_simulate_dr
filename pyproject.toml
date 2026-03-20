@@ -12,11 +12,10 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 dependencies = [
-  "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main",
+  "romancal @ git+https://github.com/spacetelescope/romancal.git@main",
   "astropy",
   "pandas",
   "numpy >=2.0.0",
-  "romancal @ git+https://github.com/spacetelescope/romancal.git@main",
 ]
 dynamic = ["version"]
 
