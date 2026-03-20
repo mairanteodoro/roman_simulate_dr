@@ -93,8 +93,8 @@ def save_mosaic_plot(mosaic_array, target_wcs, output_path, title, cmap="viridis
     ra.set_format_unit("deg")
     dec.set_format_unit("deg")
 
-    ra.set_axislabel("Right Ascension (degrees)", fontsize=12)
-    dec.set_axislabel("Declination (degrees)", fontsize=12)
+    ra.set_axislabel("Right Ascension", fontsize=12)
+    dec.set_axislabel("Declination", fontsize=12)
 
     plt.title(title, pad=20)
     plt.colorbar(im, ax=ax, label="Intensity", fraction=0.046, pad=0.04)
