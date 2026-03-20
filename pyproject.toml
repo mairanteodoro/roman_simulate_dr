@@ -46,6 +46,7 @@ repository = "https://github.com/mairanteodoro/roman_simulate_dr"
 [project.scripts]
 rdr_generate_input_catalog = "roman_simulate_dr.scripts.generate_input_catalog:main"
 rdr_generate_simulated_images = "roman_simulate_dr.scripts.generate_simulated_l1_images:_cli"
+rdr-generate-mosaic = "roman_simulate_dr.scripts.visualization_utils.create_mosaic_with_grid:main"
 
 [build-system]
 requires = ["setuptools >=60", "setuptools_scm[toml] >=3.4", "wheel"]
