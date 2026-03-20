@@ -122,10 +122,13 @@ def test_update_catalog_fluxes_success(
     fake_flux_catalog["label"] = np.array([1])
     fake_flux_catalog["redshift_true"] = np.array([1.0])
     mock_table.read.return_value = fake_flux_catalog
-    # Patch the update_fluxes import inside the method
+    # Patch at the source module since update_catalog_fluxes uses a local import
     with patch(
-        "roman_simulate_dr.scripts.generate_input_catalog.update_fluxes", create=True
-    ) as mock_update_fluxes:
+        "roman_photoz.update_romanisim_catalog_fluxes.update_fluxes"
+    ) as mock_update_fluxes, patch(
+        "roman_photoz.update_romanisim_catalog_fluxes.create_random_catalog"
+    ) as mock_create_random:
+        mock_create_random.return_value = fake_flux_catalog
         mock_update_fluxes.return_value = fake_catalog
         result = obj.update_catalog_fluxes(fake_catalog)
         assert result is fake_catalog

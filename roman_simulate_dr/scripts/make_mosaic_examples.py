@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from utils.create_mosaic_with_grid import create_mosaic
+from visualization_utils.create_mosaic_with_grid import create_mosaic
 
 # If you want to create a mosaic from the L2 files, you can use the following code:
 my_l2_files = list(Path().glob("r*_f062_cal.asdf"))
