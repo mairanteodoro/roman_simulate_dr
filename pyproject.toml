@@ -16,6 +16,7 @@ dependencies = [
   "astropy",
   "pandas",
   "numpy >=2.0.0",
+  "stpsf",
 ]
 dynamic = ["version"]
 
@@ -35,7 +36,7 @@ test = [
   "coverage",
   "roman-photoz @ git+https://github.com/spacetelescope/roman_photoz.git@main",
 ]
-dev = ["roman_simulate_dr[docs,test]", "pre-commit > 3"]
+dev = ["roman_simulate_dr[docs,test]", "pre-commit > 3", "reproject"]
 
 [project.urls]
 tracker = "https://github.com/mairanteodoro/roman_simulate_dr/issues"
