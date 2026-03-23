@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from roman_simulate_dr.scripts.logger import logger
 from roman_simulate_dr.scripts.utils import (
@@ -92,6 +93,8 @@ class RomanisimImages:
         """
         import subprocess
 
+        start_time = time.time()
+
         cmd = [
             "romanisim-make-image",
             "--radec",
@@ -103,11 +106,12 @@ class RomanisimImages:
             str(sca),
             "--bandpass",
             str(bandpass),
+            "--usecrds",
             "--roll",
             str(roll),
             "--catalog",
             str(catalog),
-            *(["--stpsf"] if stpsf else []),
+            *(["--psftype", "stpsf"] if stpsf else []),
             "--ma_table_number",
             str(ma_table_number),
             "--date",
@@ -121,11 +125,15 @@ class RomanisimImages:
         result = subprocess.run(
             cmd, capture_output=True, text=True, shell=False, check=False
         )
-        logger.info(f"[{output_filename}] STDOUT:\n{result.stdout}")
+        end_time = time.time()
+        duration = end_time - start_time
+
+        logger.info(f"[{output_filename}] Finished in {duration}.")
+
         if result.returncode != 0:
-            logger.error(f"[{output_filename}] STDERR:\n{result.stderr}")
-        else:
-            logger.info(f"[{output_filename}] STDERR:\n{result.stderr}")
+            logger.error(
+                f"[{output_filename}] FAILED after {duration}. STDERR:\n{result.stderr}"
+            )
 
         return output_filename, result.returncode
 
