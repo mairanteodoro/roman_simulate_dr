@@ -45,7 +45,8 @@ repository = "https://github.com/mairanteodoro/roman_simulate_dr"
 
 [project.scripts]
 rdr-generate-input-catalog = "roman_simulate_dr.scripts.generate_input_catalog:_cli"
-rdr-generate-simulated-images = "roman_simulate_dr.scripts.generate_simulated_l1_images:_cli"
+rdr-simulate-data = "roman_simulate_dr.scripts.rdr_wrapper:run_simulation"
+rdr-process-data = "roman_simulate_dr.scripts.rdr_wrapper:run_processing"
 rdr-generate-mosaic = "roman_simulate_dr.scripts.visualization_utils.create_mosaic_with_grid:main"
 
 [build-system]
