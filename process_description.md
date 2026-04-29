@@ -2,9 +2,12 @@
 
 ## Purpose of the package
 
-`roman_simulate_dr` is designed to provide a reproducible, end-to-end Roman data-release workflow that starts from an APT-style observation plan and ends with processed science-ready products and diagnostics.
+`roman_simulate_dr` is designed to provide a reproducible, end-to-end Roman
+data-release workflow that starts from an APT-style observation plan and ends
+with processed science-ready products and diagnostics.
 
-Its primary design goal is to make large simulation campaigns operationally consistent by standardizing:
+Its primary design goal is to make large simulation campaigns operationally
+consistent by standardizing:
 
 1. input preparation,
 2. L1 simulation,
@@ -15,37 +18,46 @@ Its primary design goal is to make large simulation campaigns operationally cons
 
 The package follows a staged architecture with strict boundaries between stages:
 
-1. **Stage A (Catalog construction)**: produce a physically plausible source catalog.
+1. **Stage A (Catalog construction)**: produce a physically plausible source
+   catalog.
 2. **Stage B (L1 simulation)**: generate detector-level uncalibrated exposures.
-3. **Stage C (romancal processing)**: convert simulated detector data into higher-level products.
-4. **Stage D (diagnostics/visualization)**: evaluate quality and scientific behavior.
+3. **Stage C (romancal processing)**: convert simulated detector data into
+   higher-level products.
+4. **Stage D (diagnostics/visualization)**: evaluate quality and scientific
+   behavior.
 
-This separation makes failures easier to localize and reruns cheaper (for example, rerunning only Stage C if simulation is already complete).
+This separation makes failures easier to localize and reruns cheaper (for
+example, rerunning only Stage C if simulation is already complete).
 
 ## Why wrapper scripts are used
 
-The command-line wrappers (`rdr-simulate-data`, `rdr-process-data`) are used to enforce operational consistency:
+The command-line wrappers (`rdr-simulate-data`, `rdr-process-data`) are used to
+enforce operational consistency:
 
 1. A fixed execution order is maintained.
 2. Logs are captured in predictable files per stage.
 3. Return codes propagate cleanly for automation/CI.
 4. User arguments are sanitized in `rdr_wrapper.py` before shell execution.
 
-The wrappers provide a stable operational interface while internal modules can evolve.
+The wrappers provide a stable operational interface while internal modules can
+evolve.
 
 ## Stage A rationale: base realism + flux realism
 
 This stage combines two complementary ideas:
 
-1. **Geometric/population realism** from Romanisim source generation (COSMOS galaxies, Gaia stars, synthetic stars).
+1. **Geometric/population realism** from Romanisim source generation (COSMOS
+   galaxies, Gaia stars, synthetic stars).
 2. **Photometric/SED realism** from optional `roman_photoz` flux catalogs.
 
 The base Romanisim catalog defines source rows and sky sampling.  
-When a `roman_photoz` flux catalog is provided, fluxes are harmonized into the Romanisim catalog rather than replacing the catalog structure itself.
+When a `roman_photoz` flux catalog is provided, fluxes are harmonized into the
+Romanisim catalog rather than replacing the catalog structure itself.
 
 ### Flux harmonization approach
 
-`update_fluxes(...)` applies per-source scaling anchored to a reference filter (default `F213`):
+`update_fluxes(...)` applies per-source scaling anchored to a reference filter
+(default `F213`):
 
 1. Convert `roman_photoz` fluxes from nJy to maggies:
    - `f_rpz(i,b) = njy_to_mgy(segment_b_flux(i))`
@@ -56,23 +68,28 @@ When a `roman_photoz` flux catalog is provided, fluxes are harmonized into the R
 
 This gives a useful compromise:
 
-1. preserves each source’s brightness normalization in the reference band from the target catalog,
+1. preserves each source’s brightness normalization in the reference band from
+   the target catalog,
 2. injects multi-band color/SED behavior from `roman_photoz`,
 3. keeps cross-band scaling coherent with a single scalar per source.
 
-`label` and `redshift_true` are also copied into the updated output to support downstream matching and diagnostics.
+`label` and `redshift_true` are also copied into the updated output to support
+downstream matching and diagnostics.
 
 ## Stage B rationale: controlled L1 simulation
 
-This creates detector-level `*_uncal.asdf` files by iterating observation-plan rows and selected SCAs.
+This creates detector-level `*_uncal.asdf` files by iterating observation-plan
+rows and selected SCAs.
 
 Key operational characteristics:
 
 1. deterministic configuration choices (fixed seed in simulation command),
-2. bounded parallelism (`max-workers`) for throughput without uncontrolled resource usage,
+2. bounded parallelism (`max-workers`) for throughput without uncontrolled
+   resource usage,
 3. Roman filename encoding of observing metadata for traceability.
 
-This stage emphasizes repeatability and straightforward provenance from plan row to output file.
+This stage emphasizes repeatability and straightforward provenance from plan row
+to output file.
 
 ## Stage C rationale: mirror the science pipeline chain
 
@@ -84,19 +101,29 @@ This intentionally follows a canonical `romancal` progression:
 4. multiband association generation,
 5. multiband catalog extraction.
 
-The value of this approach is that final products are generated by the same core processing concepts expected in operational analysis pipelines, reducing divergence between simulation studies and downstream science workflows.
+The value of this approach is that final products are generated by the same core
+processing concepts expected in operational analysis pipelines, reducing
+divergence between simulation studies and downstream science workflows.
 
 ## Stage D rationale: diagnostics and visualization
 
-This transforms processed products into interpretable quality-control artifacts and science-facing summaries.
+This transforms processed products into interpretable quality-control artifacts
+and science-facing summaries.
 
 It has three complementary layers:
 
-1. **Field-level visualization** (`rdr-generate-mosaic` / `create_mosaic_with_grid.py`) to inspect sky coverage, coadd quality, and large-scale artifacts.
-2. **Exposure/product overlays** (`visualize_generic_coadd.py`) to compare image content against truth and local detections at the file level.
-3. **Catalog-level diagnostics** (`plot_zphot_vs_ztrue.py`, optional `outlier_diagnostics.py`) to quantify redshift behavior and characterize outliers.
+1. **Field-level visualization** (`rdr-generate-mosaic` /
+   `create_mosaic_with_grid.py`) to inspect sky coverage, coadd quality, and
+   large-scale artifacts.
+2. **Exposure/product overlays** (`visualize_generic_coadd.py`) to compare image
+   content against truth and local detections at the file level.
+3. **Catalog-level diagnostics** (`plot_zphot_vs_ztrue.py`, optional
+   `outlier_diagnostics.py`) to quantify redshift behavior and characterize
+   outliers.
 
-The outputs of Stage D (mosaics, comparison PNGs, matched catalogs, outlier plots) provide a reproducible QA layer on top of the final dataset and make run-to-run comparisons straightforward.
+The outputs of Stage D (mosaics, comparison PNGs, matched catalogs, outlier
+plots) provide a reproducible QA layer on top of the final dataset and make
+run-to-run comparisons straightforward.
 
 ## Logging and failure model
 
@@ -104,13 +131,16 @@ The scripts are built for operational visibility:
 
 1. each major stage emits dedicated logs,
 2. the simulation wrapper writes a timestamped summary report,
-3. processing script uses strict shell error behavior (`set -e`, `pipefail`) so failures stop the chain early.
+3. processing script uses strict shell error behavior (`set -e`, `pipefail`) so
+   failures stop the chain early.
 
-This fail-fast model prevents partially successful runs from being mistaken as complete datasets.
+This fail-fast model prevents partially successful runs from being mistaken as
+complete datasets.
 
 ## Why separate input/output roots
 
-`RDR_INPUT_PATH` and `RDR_OUTPUT_PATH` are separated to support campaign-scale operations:
+`RDR_INPUT_PATH` and `RDR_OUTPUT_PATH` are separated to support campaign-scale
+operations:
 
 1. immutable inputs can be reused across runs,
 2. outputs can be versioned per run,
@@ -125,11 +155,13 @@ The package includes deterministic elements where practical:
 2. explicit filter lists and stage ordering,
 3. predictable naming and output locations.
 
-While external services/dependencies can still introduce variability, the orchestration is structured to minimize avoidable run-to-run drift.
+While external services/dependencies can still introduce variability, the
+orchestration is structured to minimize avoidable run-to-run drift.
 
 ## End result
 
-The processing approach is built to produce a coherent final dataset with traceable lineage:
+The processing approach is built to produce a coherent final dataset with
+traceable lineage:
 
 1. physically reasonable input source catalog,
 2. detector-level simulated exposures,
