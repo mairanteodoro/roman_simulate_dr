@@ -73,3 +73,24 @@ Check that these exist:
    - `dr_logs_multiband_catalog_step.log`
 
 If all are present and logs contain no fatal errors, final dataset production is complete.
+
+## Step 6 — Generate visualization and diagnostic artifacts (recommended)
+
+Run from repo root:
+
+1. L3 mosaic image:
+   - `uv run rdr-generate-mosaic $RDR_OUTPUT_PATH/r00001_*_f062_coadd.asdf --output $RDR_OUTPUT_PATH/l3_mosaic_f062`
+2. Per-file comparison overlays:
+   - `uv run python -m roman_simulate_dr.scripts.visualization_utils.visualize_generic_coadd $RDR_OUTPUT_PATH/r00001_*_f062_coadd.asdf --show-sources`
+3. Photo-z vs truth diagnostics:
+   - `uv run python -m roman_simulate_dr.scripts.plot_utils.plot_zphot_vs_ztrue $RDR_OUTPUT_PATH/r00001_r0_full_*y[0-9][0-9]_cat.parquet --ref-cat $RDR_OUTPUT_PATH/romanisim_input_catalog.parquet`
+
+Expected visualization/diagnostic outputs:
+
+- `$RDR_OUTPUT_PATH/l3_mosaic_f062.png`
+- `$RDR_OUTPUT_PATH/*_comparison.png`
+- `matched_results.txt`
+- `soi.txt`
+- `photoz_vs_truez.png`
+- `magnitude_histograms.png`
+- `outlier_seds/`
