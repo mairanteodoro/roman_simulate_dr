@@ -7,6 +7,7 @@
 #   3. Runs roman_mos on all skycell association JSON files in parallel;
 #   4. Creates multiband association files from *_coadd.asdf files;
 #   5. Runs MultibandCatalogStep on all relevant JSON files.
+#   6. Runs SourceCatalogStep via a standalone worker script for forced photometry.
 #
 # Output logs for each step are saved to dr_logs_*.log files.
 #
@@ -28,23 +29,24 @@ fi
 # Ensure the path exists and change to it
 if [ ! -d "$TARGET_DIR" ]; then
   echo "Error: Directory does not exist: $TARGET_DIR"
-  exit 1
+  # create the folder and the subfolder for
+  # the prompt and forced photometry outputs
+  mkdir -p "$TARGET_DIR/FORCED" "$TARGET_DIR/PROMPT"
 fi
 
 cd "$TARGET_DIR"
-echo "Processing Roman data in: $PWD"
+echo "Processing Roman data in: $TARGET_DIR"
 
 # --- Pipeline Steps ---
 
-filter_list="f062 f087 f106 f129 f146 f158 f184 f213"
+filter_list=(f062 f087 f106 f129 f146 f158 f184 f213)
 
 # 1 - roman_elp
 find . -maxdepth 1 -name '*_uncal.asdf' | xargs -I{} -P4 -n1 strun roman_elp {} \
   2>&1 | tee dr_logs_elp.log
 
-# 2 - skycell association (Ensure this script is in the same directory or PATH)
-# If it's in the same directory as this script:
-"$(dirname "$0")/create_skycell_asn.sh" ${filter_list} \
+# 2 - skycell association
+rdr-create-skycell-asn "${filter_list[@]}" \
   2>&1 | tee dr_logs_create_skycells_asn.log
 
 # 3 - roman_mos
@@ -60,3 +62,8 @@ multiband_asn *_coadd.asdf \
 find . -maxdepth 1 -type f -name "*r0_full*.json" -not -name '*_f[0-9][0-9][0-9]_*' |
   xargs -I{} -P4 -n1 strun romancal.step.MultibandCatalogStep {} \
     2>&1 | tee dr_logs_multiband_catalog_step.log
+
+# 6 - forced photometry
+find . -maxdepth 1 -type f -name "*r0_full*_segm.asdf" -not -name '*_f[0-9][0-9][0-9]_segm.asdf' | \
+  xargs -I{} -P4 -n1 rdr-run-forced-photometry {} \
+    2>&1 | tee dr_logs_forced_photometry.log
