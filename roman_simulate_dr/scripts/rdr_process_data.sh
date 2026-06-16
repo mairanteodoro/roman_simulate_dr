@@ -3,7 +3,7 @@
 #
 # Steps performed:
 #   1. Runs roman_elp on all *_uncal.asdf files in parallel;
-#   2. Generates skycell association files for a predefined filter list using create_skycell_asn.sh;
+#   2. Generates skycell association files from calibrated products;
 #   3. Runs roman_mos on all skycell association JSON files in parallel;
 #   4. Creates multiband association files from *_coadd.asdf files;
 #   5. Runs MultibandCatalogStep on all relevant JSON files.
@@ -39,14 +39,16 @@ echo "Processing Roman data in: $TARGET_DIR"
 
 # --- Pipeline Steps ---
 
-filter_list=(f062 f087 f106 f129 f146 f158 f184 f213)
-
 # 1 - roman_elp
 find . -maxdepth 1 -name '*_uncal.asdf' | xargs -I{} -P4 -n1 strun roman_elp {} \
   2>&1 | tee dr_logs_elp.log
-# 2 - skycell association
-rdr-create-skycell-asn "${filter_list[@]}" \
+
+
+# --- FULL-LEVEL PROCESSING ---
+# 2 - skycell association (full)
+rdr-create-skycell-asn \
   2>&1 | tee dr_logs_create_skycells_asn.log
+
 # 3 - roman_mos
 find . -maxdepth 1 -type f -name 'r00001_*_*_*x*y*_asn.json' |
   xargs -I{} -P4 -n1 strun roman_mos {} \
@@ -61,7 +63,19 @@ find . -maxdepth 1 -type f -name "*r0_full*.json" -not -name '*_f[0-9][0-9][0-9]
   xargs -I{} -P4 -n1 strun romancal.step.MultibandCatalogStep {} \
     2>&1 | tee dr_logs_multiband_catalog_step.log
 
-# 6 - forced photometry
-find . -maxdepth 1 -type f -name "*r0_full*_segm.asdf" -not -name '*_f[0-9][0-9][0-9]_segm.asdf' | \
-  xargs -I{} -P4 -n1 rdr-run-forced-photometry {} \
-    2>&1 | tee dr_logs_forced_photometry.log
+
+# --- PASS-LEVEL PROCESSING ---
+# 2 - skycell association (pass)
+rdr-create-skycell-asn \
+  --product-type pass \
+  2>&1 | tee dr_logs_create_skycells_asn_pass.log
+
+# 3 - build pass-level coadds
+find . -maxdepth 1 -type f -name 'r*_r0_p*_*_f[0-9][0-9][0-9]_asn.json' \
+  | xargs -I{} -P4 -n1 uv run strun roman_mos {} \
+  2>&1 | tee dr_logs_mos_pass.log
+
+# 4 - forced photometry on pass-level coadds
+rdr-run-forced-photometry 'r*_r0_p*_*_f[0-9][0-9][0-9]_coadd.asdf' \
+  2>&1 | tee dr_logs_forced_photometry.log
+
