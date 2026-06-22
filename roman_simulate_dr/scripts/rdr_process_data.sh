@@ -46,8 +46,10 @@ find . -maxdepth 1 -name '*_uncal.asdf' | xargs -I{} -P4 -n1 strun roman_elp {} 
 
 # --- FULL-LEVEL PROCESSING ---
 # 2 - skycell association (full)
-rdr-create-skycell-asn \
+skycell_asn r*_cal.asdf -o r00001 --product-type full \
   2>&1 | tee dr_logs_create_skycells_asn.log
+skycell_asn r*_cal.asdf -o r00001 --product-type full --data-release-id r0 \
+  2>&1 | tee -a dr_logs_create_skycells_asn.log
 
 # 3 - roman_mos
 find . -maxdepth 1 -type f -name 'r00001_*_*_*x*y*_asn.json' |
@@ -66,9 +68,10 @@ find . -maxdepth 1 -type f -name "*r0_full*.json" -not -name '*_f[0-9][0-9][0-9]
 
 # --- PASS-LEVEL PROCESSING ---
 # 2 - skycell association (pass)
-rdr-create-skycell-asn \
-  --product-type pass \
+skycell_asn r*_cal.asdf -o r00001 --product-type pass \
   2>&1 | tee dr_logs_create_skycells_asn_pass.log
+skycell_asn r*_cal.asdf -o r00001 --product-type pass --data-release-id r0 \
+  2>&1 | tee -a dr_logs_create_skycells_asn_pass.log
 
 # 3 - build pass-level coadds
 find . -maxdepth 1 -type f -name 'r*_r0_p*_*_f[0-9][0-9][0-9]_asn.json' \

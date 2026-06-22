@@ -48,7 +48,6 @@ rdr-generate-input-catalog = "roman_simulate_dr.scripts.generate_input_catalog:_
 rdr-generate-simulated-images = "roman_simulate_dr.scripts.generate_simulated_l1_images:_cli"
 rdr-generate-mosaic = "roman_simulate_dr.scripts.visualization_utils.create_mosaic_with_grid:main"
 rdr-run-forced-photometry = "roman_simulate_dr.scripts.run_forced_photometry:main"
-rdr-create-skycell-asn = "roman_simulate_dr.scripts.create_skycell_asn:main"
 
 [build-system]
 requires = ["setuptools >=60", "setuptools_scm[toml] >=3.4", "wheel"]
