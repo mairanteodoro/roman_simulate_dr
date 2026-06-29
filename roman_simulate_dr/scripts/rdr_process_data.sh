@@ -79,6 +79,6 @@ find . -maxdepth 1 -type f -name 'r*_r0_p*_*_f[0-9][0-9][0-9]_asn.json' \
   2>&1 | tee dr_logs_mos_pass.log
 
 # 4 - forced photometry on pass-level coadds
-rdr-run-forced-photometry 'r*_r0_p*_*_f[0-9][0-9][0-9]_coadd.asdf' \
+rdr-run-forced-photometry r*_r0_p*_*_f[0-9][0-9][0-9]_coadd.asdf \
   2>&1 | tee dr_logs_forced_photometry.log
 
