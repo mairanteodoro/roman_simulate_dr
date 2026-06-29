@@ -1,6 +1,5 @@
 """Run forced photometry on L3 pass/subset coadds using full-stack multiband segmentation."""
 import argparse
-import glob
 import re
 import subprocess
 import sys
@@ -13,24 +12,6 @@ L3_COADD_PATTERN = re.compile(
     r"(?P<skycell>[^_]+)_"
     r"(?P<optical_element>[^_]+)_coadd\.asdf$"
 )
-
-
-def _expand_inputs(inputs: list[str]) -> list[Path]:
-    """Expand input files/globs while preserving order and removing duplicates."""
-    expanded: list[Path] = []
-    for input_item in inputs:
-        if any(char in input_item for char in "*?["):
-            expanded.extend(Path(path) for path in sorted(glob.glob(input_item)))
-        else:
-            expanded.append(Path(input_item))
-
-    unique_files: list[Path] = []
-    seen: set[Path] = set()
-    for path in expanded:
-        if path not in seen:
-            seen.add(path)
-            unique_files.append(path)
-    return unique_files
 
 
 def _multiband_segm_path_from_subset_coadd(coadd_path: Path) -> Path:
@@ -81,19 +62,14 @@ def main():
         type=str,
         nargs="+",
         help=(
-            "L3 pass/subset coadd files or glob patterns "
-            "(e.g., 'r00001_r1_p02002_10m6x2y50_f146_coadd.asdf')."
+            "One or more L3 pass/subset coadd files "
+            "(shell globs should be unquoted so the shell expands them) "
+            "(e.g., r00001_r1_p02002_10m6x2y50_f146_coadd.asdf)."
         ),
     )
 
     args = parser.parse_args()
-    coadd_files = _expand_inputs(args.coadd_inputs)
-    if not coadd_files:
-        print(
-            f"Error: no files matched the provided inputs: {' '.join(args.coadd_inputs)}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    coadd_files = [Path(input_item) for input_item in args.coadd_inputs]
 
     print(f"Processing {len(coadd_files)} L3 pass/subset coadd file(s).")
     print("-" * 40)

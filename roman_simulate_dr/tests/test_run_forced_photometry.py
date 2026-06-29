@@ -57,22 +57,17 @@ def test_main_runs_for_multiple_subset_coadds(monkeypatch, tmp_path):
     ]
 
 
-def test_main_expands_glob_inputs(monkeypatch, tmp_path):
-    """Purpose: Ensure wildcard input patterns are expanded into subset coadd files."""
-    coadd_file = tmp_path / "r00001_r0_s02002_270p65x67y51_f146_coadd.asdf"
-    segm_file = tmp_path / "r00001_r0_full_270p65x67y51_segm.asdf"
-    coadd_file.touch()
-    segm_file.touch()
-
+def test_main_exits_for_literal_glob_pattern(monkeypatch, tmp_path, capsys):
+    """Purpose: Confirm glob patterns must be shell-expanded before reaching CLI args."""
     pattern = str(tmp_path / "*_s02002_*_f146_coadd.asdf")
     monkeypatch.setattr(run_forced_photometry.sys, "argv", ["prog", pattern])
 
-    with patch(
-        "roman_simulate_dr.scripts.run_forced_photometry.subprocess.run"
-    ) as mock_run:
+    with pytest.raises(SystemExit) as exc_info:
         run_forced_photometry.main()
 
-    assert mock_run.call_count == 1
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert f"Error: Coadd file not found: {pattern}" in captured.err
 
 
 def test_main_exits_if_coadd_is_missing(monkeypatch, tmp_path, capsys):
