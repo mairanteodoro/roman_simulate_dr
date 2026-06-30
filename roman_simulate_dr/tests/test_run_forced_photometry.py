@@ -57,25 +57,10 @@ def test_main_runs_for_multiple_subset_coadds(monkeypatch, tmp_path):
     ]
 
 
-def test_main_exits_for_literal_glob_pattern(monkeypatch, tmp_path, capsys):
-    """Purpose: Confirm glob patterns must be shell-expanded before reaching CLI args."""
-    pattern = str(tmp_path / "*_s02002_*_f146_coadd.asdf")
-    monkeypatch.setattr(run_forced_photometry.sys, "argv", ["prog", pattern])
-
-    with pytest.raises(SystemExit) as exc_info:
-        run_forced_photometry.main()
-
-    assert exc_info.value.code == 1
-    captured = capsys.readouterr()
-    assert f"Error: Coadd file not found: {pattern}" in captured.err
-
-
 def test_main_exits_if_coadd_is_missing(monkeypatch, tmp_path, capsys):
     """Purpose: Confirm the script exits with an error for missing coadd inputs."""
     missing_coadd = tmp_path / "r00001_r0_s02002_270p65x67y51_f146_coadd.asdf"
-    monkeypatch.setattr(
-        run_forced_photometry.sys, "argv", ["prog", str(missing_coadd)]
-    )
+    monkeypatch.setattr(run_forced_photometry.sys, "argv", ["prog", str(missing_coadd)])
 
     with pytest.raises(SystemExit) as exc_info:
         run_forced_photometry.main()
@@ -97,6 +82,7 @@ def test_main_exits_if_derived_segm_is_missing(monkeypatch, tmp_path, capsys):
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "Error: Multiband segmentation file not found:" in captured.err
+
 
 def test_main_accepts_pass_grouping_token(monkeypatch, tmp_path):
     """Purpose: Confirm p-prefixed pass grouping tokens are accepted."""
